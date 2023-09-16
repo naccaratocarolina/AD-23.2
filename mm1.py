@@ -1,131 +1,92 @@
-from queue import Queue
 import random
+import simpy
 import math
-
-class Event():
-  def __init__(self, id, type, time):
-    self._id = id # Identificador do evento
-    self._type = type # Chegada (arrival) ou partida (departure)
-    self._time = time # Tempo de ocorrência do evento
-  
-  @property
-  def id(self):
-    return self._id
-
-  @property
-  def type(self):
-    return self._type
-  
-  @property
-  def time(self):
-    return self._time
+from collections import deque
 
 class mm1():
-  def __init__(self, server_rate, arrival_rate, max_size = 100):
-    self.server_rate = server_rate # Taxa de serviço do servidor
-    self.arrival_rate = arrival_rate # Taxa de chegada de clientes
-    self.max_size = max_size # Número máximo de chegadas
-    self.N = 0 # Número de clientes na fila
-    self.total_arrivals = 0
-    self.L = Queue(max_size) # Lista de eventos
-    self.clock = 0 # Relógio do simulador (eventos/time unit)
-    self.next_arrival = self.generate_arrival() # Sortear tempo da próxima chegada
-    self.next_departure = math.inf # Inicializar tempo da próxima partida com infinito
-  
-  def print_queue(self):
-    if self.L.empty():
-      print('[]')
-    else:
-      for event in self.L.queue:
-        print(f'#{event.id}', end = ' ')
-    print()
-  
-  def generate_arrival(self):
+  def __init__(self, env, num_servers, arrival_rate, service_rate):
+    self.env = env # Ambiente de simulação
+    self.server = simpy.Resource(env, num_servers) # Servidor
+    self.arrival_rate = arrival_rate # Taxa de chegada
+    self.service_rate = service_rate # Taxa de serviço
+    self.queue = deque() # Fila de clientes
+    self.in_system = [(0,0)] # Tempo atual da simulação e número de clientes no sistema
+    self.wait_times = [] # Lista de tempos de espera dos clientes
+    self.next_arrival = self.generate_next_arrival() # Gerador de chegadas
+    self.next_departure = math.inf # Tempo da próxima partida
+
+  def generate_next_arrival(self):
     # Sortear tempo da próxima chegada de acordo com distribuição exponencial
     return random.expovariate(self.arrival_rate)
+
+  def generate_next_departure(self):
+    # Sortear tempo de partida de acordo com distribuição exponencial
+    return random.expovariate(self.service_rate)
+
+  def generate_arrival(self):
+    # Gera chegada de cliente baseado na proxima chegada
+    yield self.env.timeout(self.next_arrival)
   
   def generate_departure(self):
-    # Sortear tempo de partida de acordo com distribuição exponencial
-    return random.expovariate(self.server_rate)
+    # Gera partida de cliente baseado na proxima partida
+    yield self.env.timeout(self.next_departure)
   
   # Handler para evento de chegada
   def arrival(self):
-    # Incrementar número de clientes na fila
-    self.N += 1
+    print('%g: Cliente chega (num_in_system=%d->%d)' % 
+      (self.env.now, len(self.queue), len(self.queue)+1))
 
-    # Sortear tempo da próxima chegada
-    self.next_arrival = self.generate_arrival()
+    # Adiciona evento no final da fila
+    self.queue.append(self.env.now)
+    self.in_system.append((self.env.now, len(self.queue)))
 
-    # Atualizar relógio do simulador
-    self.clock += self.next_arrival
+    # Agenda chegada do próximo cliente
+    with self.server.request() as request:
+      yield request
+      yield self.env.process(self.generate_arrival())
+    
+    # Se houver somente 1 cliente no sistema, ele passa a ser atendido imediatamente
+    if len(self.queue) == 1:
+      # Agenda partida do próximo cliente
+      with self.server.request() as request:
+        yield request
+        yield self.env.process(self.generate_departure())
 
-    # Novo evento de chegada
-    self.total_arrivals += 1
-    event = Event(self.total_arrivals, 'arrival', self.clock)
+  # Handler para evento de partida
+  def departure(self):
+    print('%g: Cliente sai (num_in_system=%d->%d)' % 
+      (self.env.now, len(self.queue), len(self.queue)-1))
 
-    # Incluir evento na lista L
-    if not self.L.full():
-      self.L.put(event)
-    else:
-      print('Fila cheia!')
+    # Remove cliente do início da fila
+    served = self.queue.popleft()
+    self.in_system.append((self.env.now, len(self.queue)))
+    self.wait_times.append(self.env.now - served)
 
-    # Printa log de chegada
-    print('Cliente #%d chegou no instante %f' % (event.id, self.clock))
-
-    # Imprime fila
-    self.print_queue()
-
-    # Se N = 1, cliente passa a ser atendido imediatamente
-    #if self.N == 1:
-      #self.departure(True)
+    # Se houver clientes na fila, o próximo cliente passa a ser atendido
+    if len(self.queue) > 0:
+      # Agenda partida do próximo cliente
+      with self.server.request() as request:
+        yield request
+        yield self.env.process(self.generate_departure())
   
-  def departure(self, force = False):
-    # Decrementar número de clientes na fila
-    self.N -= 1
+def run(env, num_servers, arrival_rate, service_rate):
+  # Inicializar simulador
+  mm1_sim = mm1(env, num_servers, arrival_rate, service_rate)
 
-    if self.N > 0 or force:
-      # Sortear tempo de partida
-      self.next_departure = self.generate_departure()
+  # Agendar primeira chegada
+  env.process(mm1_sim.arrival())
 
-      # Atualizar relógio do simulador
-      self.clock += self.next_departure
+  # Executar simulação
+  while True:
+    # Aguardar próximo evento de chegada
+    yield env.timeout(mm1_sim.next_arrival)
+    env.process(mm1_sim.arrival())
 
-      # Retira cliente da fila
-      event = self.L.get()
-
-      # Novo evento de partida
-      event = Event(event.id, 'departure', self.clock)
-
-      # Printa log de partida
-      print('Cliente #%d atendido no instante %f' % (event.id, self.clock))
-    else:
-      print('Servidor ocioso no instante %f' % (self.clock))
-  
-# Plano de controle: Loop principal do simulador
 if __name__ == '__main__':
   server_rate = 1.0 # Taxa de serviço do servidor
   arrival_rate = 0.5 # Taxa de chegada de clientes
-  max_arrivals = 10 # Número máximo de chegadas
 
   # Inicializar simulador
-  simulator = mm1(server_rate, arrival_rate, max_arrivals)
-
-  # Evento inicial de chegada
-  simulator.arrival()
-
-  # Quantidade de eventos atendidos
-  processed_events = 0
-
-  while simulator.L.qsize() > 0 and processed_events < max_arrivals:
-    # Incrementar quantidade de eventos atendidos
-    processed_events += 1
-
-    # Obter próximo evento
-    event = simulator.L.get()
-
-    # Chegada
-    if event.type == 'arrival':
-      simulator.arrival()
-    # Partida
-    elif event.type == 'departure':
-      simulator.departure()
+  env = simpy.Environment()
+  env.process(run(env, 1, arrival_rate, server_rate))
+  env.run(until=5)
