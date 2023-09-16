@@ -3,6 +3,13 @@ import simpy
 import math
 from collections import deque
 
+# Cores para print
+SIM_COLOR = '\033[30m' # Preto
+SIM_BACKGROUND_COLOR = '\033[47m' # Fundo branco
+ARRIVAL_COLOR = '\033[33m' # Amarelo
+DEPARTURE_COLOR = '\033[34m' # Azul
+RESET_COLOR = '\033[0m'
+
 class mm1():
   def __init__(self, env, num_servers, arrival_rate, service_rate):
     self.env = env # Ambiente de simulação
@@ -33,8 +40,7 @@ class mm1():
   
   # Handler para evento de chegada
   def arrival(self):
-    print('%g: Cliente chega (num_in_system=%d->%d)' % 
-      (self.env.now, len(self.queue), len(self.queue)+1))
+    self.mm1_log(True)
 
     # Adiciona evento no final da fila
     self.queue.append(self.env.now)
@@ -63,8 +69,7 @@ class mm1():
   def departure(self):
     # Se houver clientes na fila, o próximo cliente passa a ser atendido
     if len(self.queue) > 0:
-      print('%g: Cliente sai (num_in_system=%d->%d)' % 
-        (self.env.now, len(self.queue), len(self.queue)-1))
+      self.mm1_log(False)
 
       # Remove cliente do início da fila
       served = self.queue.popleft()
@@ -78,10 +83,14 @@ class mm1():
         yield request
         yield self.env.process(self.generate_departure())
   
-def run(env, num_servers, arrival_rate, service_rate):
-  # Inicializar simulador
-  mm1_sim = mm1(env, num_servers, arrival_rate, service_rate)
+  def mm1_log(self, event_type):
+    size = len(self.queue)
+    if event_type:
+      print(f"{ARRIVAL_COLOR}{self.env.now:.2f}: Cliente chega (num_in_system={size}->{size-1}){RESET_COLOR}") 
+    else:
+      print(f"{DEPARTURE_COLOR}{self.env.now:.2f}: Cliente sai (num_in_system={size}->{size-1}){RESET_COLOR}")
 
+def run(mm1_sim):
   # Agendar primeira chegada
   env.process(mm1_sim.arrival())
 
@@ -96,7 +105,9 @@ def run(env, num_servers, arrival_rate, service_rate):
     else:
       # Partida
       env.process(mm1_sim.departure())
-    
+
+def sim_log(env, msg):
+  print(f"{SIM_COLOR}{SIM_BACKGROUND_COLOR}{env.now:.2f}: {msg}{RESET_COLOR}")
 
 if __name__ == '__main__':
   server_rate = 0.5 # Taxa de serviço do servidor
@@ -104,5 +115,10 @@ if __name__ == '__main__':
 
   # Inicializar simulador
   env = simpy.Environment()
-  env.process(run(env, 1, arrival_rate, server_rate))
-  env.run(until=50)
+  # random.seed(42) # Adicionando semente para geração de números aleatórios
+  sim_log(env, 'Inicializando simulador')
+  mm1_sim = mm1(env, 1, arrival_rate, server_rate)
+  env.process(run(mm1_sim))
+  env.run(until=10)
+  sim_log(env, 'Simulação finalizada')
+  
