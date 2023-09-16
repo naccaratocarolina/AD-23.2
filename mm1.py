@@ -40,10 +40,17 @@ class mm1():
     self.queue.append(self.env.now)
     self.in_system.append((self.env.now, len(self.queue)))
 
+    # Sortear tempo da próxima chegada
+    self.next_arrival = self.generate_next_arrival()
+
     # Agenda chegada do próximo cliente
     with self.server.request() as request:
       yield request
       yield self.env.process(self.generate_arrival())
+    
+    # Atualizar tempo da próxima partida
+    if (self.next_departure == math.inf):
+      self.env.process(self.departure())
     
     # Se houver somente 1 cliente no sistema, ele passa a ser atendido imediatamente
     if len(self.queue) == 1:
@@ -54,16 +61,18 @@ class mm1():
 
   # Handler para evento de partida
   def departure(self):
-    print('%g: Cliente sai (num_in_system=%d->%d)' % 
-      (self.env.now, len(self.queue), len(self.queue)-1))
-
-    # Remove cliente do início da fila
-    served = self.queue.popleft()
-    self.in_system.append((self.env.now, len(self.queue)))
-    self.wait_times.append(self.env.now - served)
-
     # Se houver clientes na fila, o próximo cliente passa a ser atendido
     if len(self.queue) > 0:
+      print('%g: Cliente sai (num_in_system=%d->%d)' % 
+        (self.env.now, len(self.queue), len(self.queue)-1))
+
+      # Remove cliente do início da fila
+      served = self.queue.popleft()
+      self.in_system.append((self.env.now, len(self.queue)))
+      self.wait_times.append(self.env.now - served)
+
+      # Sortear tempo da próxima partida
+      self.next_departure = self.generate_next_departure()
       # Agenda partida do próximo cliente
       with self.server.request() as request:
         yield request
@@ -78,15 +87,22 @@ def run(env, num_servers, arrival_rate, service_rate):
 
   # Executar simulação
   while True:
-    # Aguardar próximo evento de chegada
-    yield env.timeout(mm1_sim.next_arrival)
-    env.process(mm1_sim.arrival())
+    # Aguarda proximo evento de chegada ou partida
+    yield env.any_of([env.timeout(mm1_sim.next_arrival), env.timeout(mm1_sim.next_departure)])
+
+    if mm1_sim.next_arrival < mm1_sim.next_departure:
+      # Chegada
+      env.process(mm1_sim.arrival())
+    else:
+      # Partida
+      env.process(mm1_sim.departure())
+    
 
 if __name__ == '__main__':
-  server_rate = 1.0 # Taxa de serviço do servidor
+  server_rate = 0.5 # Taxa de serviço do servidor
   arrival_rate = 0.5 # Taxa de chegada de clientes
 
   # Inicializar simulador
   env = simpy.Environment()
   env.process(run(env, 1, arrival_rate, server_rate))
-  env.run(until=5)
+  env.run(until=50)
