@@ -1,4 +1,3 @@
-import simpy
 import random
 
 # Cores para print
@@ -7,64 +6,54 @@ WIN_COLOR = '\033[32m' # Verde
 RESET_COLOR = '\033[0m'
 
 class Gambler:
-  def __init__(self, env, initial_capital, bet_amount, win_prob):
-    self.env = env # Ambiente de simulação
-    self.capital = initial_capital # Balanço inicial
-    self.bet_amount = bet_amount # Valor da aposta
-    self.win_prob = win_prob # Probabilidade de ganhar
-    self.loss_prob = (1 - win_prob) # Probabilidade de perder
-    self.capital_log = [(0, self.capital)] # Rodada e balanço
-    self.rounds = 0 # Número de rodadas
-  
-  # Handler para evento de aposta
+  def __init__(self, initial_capital, bet_amount, win_prob):
+    self.capital = initial_capital
+    self.bet_amount = bet_amount
+    self.win_prob = win_prob
+    self.loss_prob = 1 - win_prob
+    self.capital_log = [(0, self.capital)]
+    self.rounds = 0
+
   def bet(self):
-    # Sortear resultado da aposta
+    # Sorteia se o jogador ganhou ou perdeu a aposta
     bet = random.choices([True, False], weights=[self.win_prob, self.loss_prob])[0]
-    
-    # Atualizar balanço
+
+    # Atualiza o capital do jogador
     if bet:
       self.capital += self.bet_amount
     else:
       self.capital -= self.bet_amount
 
-    # Avança o tempo em uma unidade (uma rodada)
+    # Atualiza contador de rodadas e log de capital
     self.rounds += 1
-    yield self.env.timeout(1)
-
-    # Adiciona balanço atual à lista de balanços
     self.capital_log.append((self.rounds, self.capital))
 
-    gambler.gambler_log(bet)
-  
+    self.gambler_log(bet)
+
   def gambler_log(self, won_round):
     if won_round:
       print(f'{WIN_COLOR}Rodada {self.rounds} | Ganhou {self.bet_amount} | Balanço: {self.capital}{RESET_COLOR}')
     else:
       print(f'{LOSS_COLOR}Rodada {self.rounds} | Perdeu {self.bet_amount} | Balanço: {self.capital}{RESET_COLOR}')
 
-def run(env, gambler, goal):
-  # Enquanto o jogador não faliu e não atingiu o objetivo, ele continua apostando
+def run(gambler, goal):
+  # Simula apostas até que o jogador fique sem dinheiro ou atinja o objetivo
   while gambler.capital > 0 and gambler.capital < goal:
-    # Gera evento de aposta
-    yield env.process(gambler.bet())
+    gambler.bet()
 
 if __name__ == "__main__":
-  initial_capital = 1 # Balanço inicial
-  bet_amount = 1 # Valor da aposta
-  win_prob = 0.5 # Probabilidade de ganhar
-  goal = 6 # Objetivo
+  initial_capital = 10
+  bet_amount = 1
+  win_prob = 0.5
+  goal = 12
 
-  # Imprime quantidade inicial, objetivo e valor da aposta
   print(f'Capital inicial: {initial_capital}')
   print(f'Objetivo: {goal}')
   print(f'Valor da aposta: {bet_amount}\n')
 
-  env = simpy.Environment() # Cria ambiente de simulação
-  gambler = Gambler(env, initial_capital, bet_amount, win_prob) # Cria jogador
-  env.process(run(env, gambler, goal)) # Adiciona jogador ao ambiente de simulação
-  env.run() # Roda a simulação
+  gambler = Gambler(initial_capital, bet_amount, win_prob)
+  run(gambler, goal)
 
-  # Imprime se houve ruina ou não
   if gambler.capital == 0:
     print(f'\nO jogador faliu em {gambler.rounds} rodadas')
   elif gambler.capital == goal:
