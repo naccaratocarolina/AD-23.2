@@ -13,7 +13,7 @@ class Gambler:
     self.bet_amount = bet_amount # Valor da aposta
     self.win_prob = win_prob # Probabilidade de ganhar
     self.loss_prob = (1 - win_prob) # Probabilidade de perder
-    self.capital_log = [(0, self.capital)] # Lista de balanços
+    self.capital_log = [(0, self.capital)] # Rodada e balanço
     self.rounds = 0 # Número de rodadas
   
   # Handler para evento de aposta
@@ -43,14 +43,16 @@ class Gambler:
       print(f'{LOSS_COLOR}Rodada {self.rounds} | Perdeu {self.bet_amount} | Balanço: {self.capital}{RESET_COLOR}')
 
 def run(env, gambler, goal):
+  # Enquanto o jogador não faliu e não atingiu o objetivo, ele continua apostando
   while gambler.capital > 0 and gambler.capital < goal:
+    # Gera evento de aposta
     yield env.process(gambler.bet())
 
 if __name__ == "__main__":
   initial_capital = 1 # Balanço inicial
   bet_amount = 1 # Valor da aposta
-  win_prob = 0.51 # Probabilidade de ganhar
-  goal = 4 # Objetivo
+  win_prob = 0.5 # Probabilidade de ganhar
+  goal = 6 # Objetivo
 
   # Imprime quantidade inicial, objetivo e valor da aposta
   print(f'Capital inicial: {initial_capital}')
@@ -64,6 +66,6 @@ if __name__ == "__main__":
 
   # Imprime se houve ruina ou não
   if gambler.capital == 0:
-    print(f'\nO jogador faliu')
+    print(f'\nO jogador faliu em {gambler.rounds} rodadas')
   elif gambler.capital == goal:
-    print(f'\nO jogador atingiu o objetivo')
+    print(f'\nO jogador atingiu o objetivo em {gambler.rounds} rodadas')
