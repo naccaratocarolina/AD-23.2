@@ -2,6 +2,7 @@ import random
 import simpy
 import math
 from collections import deque
+import numpy as np
 
 # Cores para print
 SIM_COLOR = '\033[30m' # Preto
@@ -23,12 +24,12 @@ class mm1():
     self.next_departure = math.inf # Tempo da próxima partida
 
   def generate_next_arrival(self):
-    # Sortear tempo da próxima chegada de acordo com distribuição exponencial
-    return random.expovariate(self.arrival_rate)
+    # Sortear tempo da próxima chegada de acordo com distribuição poisson
+    return np.random.poisson(self.arrival_rate)    
 
   def generate_next_departure(self):
-    # Sortear tempo de partida de acordo com distribuição exponencial
-    return random.expovariate(self.service_rate)
+    # Sortear tempo da próxima partida de acordo com distribuição exponencial
+    return np.random.exponential(1/self.service_rate)
 
   def generate_arrival(self):
     # Gera chegada de cliente baseado na proxima chegada
@@ -54,16 +55,9 @@ class mm1():
       yield request
       yield self.env.process(self.generate_arrival())
     
-    # Atualizar tempo da próxima partida
-    if (self.next_departure == math.inf):
-      self.env.process(self.departure())
-    
     # Se houver somente 1 cliente no sistema, ele passa a ser atendido imediatamente
     if len(self.queue) == 1:
-      # Agenda partida do próximo cliente
-      with self.server.request() as request:
-        yield request
-        yield self.env.process(self.generate_departure())
+      self.env.process(self.departure())
 
   # Handler para evento de partida
   def departure(self):
@@ -78,6 +72,7 @@ class mm1():
 
       # Sortear tempo da próxima partida
       self.next_departure = self.generate_next_departure()
+
       # Agenda partida do próximo cliente
       with self.server.request() as request:
         yield request
@@ -86,39 +81,63 @@ class mm1():
   def mm1_log(self, event_type):
     size = len(self.queue)
     if event_type:
-      print(f"{ARRIVAL_COLOR}{self.env.now:.2f}: Cliente chega (num_in_system={size}->{size-1}){RESET_COLOR}") 
+      print(f"{ARRIVAL_COLOR}{self.env.now:.2f}: Cliente chega (num_in_system={size}->{size+1}){RESET_COLOR}") 
     else:
       print(f"{DEPARTURE_COLOR}{self.env.now:.2f}: Cliente sai (num_in_system={size}->{size-1}){RESET_COLOR}")
 
-def run(mm1_sim):
+def run(mm1_sim, max_iter):
   # Agendar primeira chegada
   env.process(mm1_sim.arrival())
+  env.step()
+
+  # Inicializar contador de eventos processados
+  processed_events = 0
 
   # Executar simulação
-  while True:
+  while len(mm1_sim.queue) > 0 and processed_events < max_iter:
+    # Se for o primeiro evento e não houver partida agendada, agendar partida
+    if processed_events == 1 and mm1_sim.next_departure == math.inf:
+      mm1_sim.next_departure = mm1_sim.generate_next_departure()
+
+    # Incrementar contador de eventos processados
+    processed_events += 1
+
     # Aguarda proximo evento de chegada ou partida
     yield env.any_of([env.timeout(mm1_sim.next_arrival), env.timeout(mm1_sim.next_departure)])
 
+    # Verifica qual evento ocorreu primeiro
     if mm1_sim.next_arrival < mm1_sim.next_departure:
       # Chegada
       env.process(mm1_sim.arrival())
     else:
       # Partida
       env.process(mm1_sim.departure())
+  
+  return
+    
+def sim_log(msg):
+  print(f"{SIM_COLOR}{SIM_BACKGROUND_COLOR}{msg}{RESET_COLOR}")
 
-def sim_log(env, msg):
-  print(f"{SIM_COLOR}{SIM_BACKGROUND_COLOR}{env.now:.2f}: {msg}{RESET_COLOR}")
+def yield_event(env, event):
+  yield env.timeout(event)
 
 if __name__ == '__main__':
-  server_rate = 0.5 # Taxa de serviço do servidor
-  arrival_rate = 0.5 # Taxa de chegada de clientes
+  server_rate = 0.8 # Taxa de serviço do servidor
+  arrival_rate = 1.2 # Taxa de chegada de clientes
+  max_iter = 100
 
   # Inicializar simulador
   env = simpy.Environment()
-  # random.seed(42) # Adicionando semente para geração de números aleatórios
-  sim_log(env, 'Inicializando simulador')
+  # random.seed(13579) # Adicionando semente para geração de números aleatórios
+  sim_log('Inicializando simulador')
   mm1_sim = mm1(env, 1, arrival_rate, server_rate)
-  env.process(run(mm1_sim))
-  env.run(until=10)
-  sim_log(env, 'Simulação finalizada')
+  proc = env.process(run(mm1_sim, max_iter))
+  env.run()
+  yield_event(env, proc)
+  sim_log('Simulação finalizada')
+  print()
+
+  # Calcular estatísticas
+  sim_log('Estatísticas')
+  print(f'Número de clientes: {len(mm1_sim.wait_times)}')
   
