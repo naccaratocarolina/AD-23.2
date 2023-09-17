@@ -96,7 +96,7 @@ def run(mm1_sim, max_iter):
   # Executar simulação
   while len(mm1_sim.queue) > 0 and processed_events < max_iter:
     # Se for o primeiro evento e não houver partida agendada, agendar partida
-    if processed_events == 1 and mm1_sim.next_departure == math.inf:
+    if mm1_sim.next_departure == math.inf:
       mm1_sim.next_departure = mm1_sim.generate_next_departure()
 
     # Incrementar contador de eventos processados
