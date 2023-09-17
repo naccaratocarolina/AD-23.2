@@ -1,7 +1,7 @@
-import random
 import simpy
 import math
 from collections import deque
+import numpy as np
 
 # Cores para print
 SIM_COLOR = '\033[30m' # Preto
@@ -23,12 +23,12 @@ class mm1():
     self.next_departure = math.inf # Tempo da próxima partida
 
   def generate_next_arrival(self):
-    # Sortear tempo da próxima chegada de acordo com distribuição exponencial
-    return random.expovariate(self.arrival_rate)
+    # Sortear tempo da próxima chegada de acordo com distribuição poisson
+    return np.random.poisson(1/self.arrival_rate)
 
   def generate_next_departure(self):
     # Sortear tempo da próxima partida de acordo com distribuição exponencial
-    return random.expovariate(self.arrival_rate)
+    return np.random.exponential(1/self.service_rate)
 
   def generate_arrival(self):
     # Gera chegada de cliente baseado na proxima chegada
@@ -129,7 +129,7 @@ if __name__ == '__main__':
   env = simpy.Environment()
   
   # Descomente a linha abaixo para gerar sempre a mesma sequência de números aleatórios
-  # random.seed(2**12)
+  # np.random.seed(2**12)
 
   # Executar simulação
   sim_log('Inicializando simulador')
