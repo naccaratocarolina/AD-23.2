@@ -24,7 +24,7 @@ class mm1():
 
   def generate_next_arrival(self):
     # Sortear tempo da próxima chegada de acordo com distribuição poisson
-    return np.random.poisson(1/self.arrival_rate)
+    return np.random.poisson(self.arrival_rate)
 
   def generate_next_departure(self):
     # Sortear tempo da próxima partida de acordo com distribuição exponencial
@@ -121,8 +121,8 @@ def yield_event(env, event):
   yield env.timeout(event)
 
 if __name__ == '__main__':
-  server_rate = 2  # Taxa de serviço do servidor
-  arrival_rate = 1 # Taxa de chegada de clientes
+  server_rate = 1  # Taxa de serviço do servidor
+  arrival_rate = 2 # Taxa de chegada de clientes
   max_iter = 100 # Número máximo de iterações
 
   # Inicializar simulador
