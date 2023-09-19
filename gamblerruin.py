@@ -46,11 +46,11 @@ def run(gambler, goal):
 
 def parse_args():
   parser = argparse.ArgumentParser(description='Simulação de apostas')
-  parser.add_argument('--initial-capital', type=int, default=1, help='Capital inicial do jogador')
-  parser.add_argument('--bet-amount', type=int, default=1, help='Valor da aposta')
-  parser.add_argument('--win-prob', type=float, default=0.5, help='Probabilidade de ganhar a aposta')
-  parser.add_argument('--goal', type=int, default=5, help='Objetivo do jogador')
-  parser.add_argument('--max-iter', type=int, default=3, help='Número máximo de iterações')
+  parser.add_argument('-c', '--initial-capital', type=int, default=1, help='Capital inicial do jogador')
+  parser.add_argument('-b','--bet-amount', type=int, default=1, help='Valor da aposta')
+  parser.add_argument('-w','--win-prob', type=float, default=0.5, help='Probabilidade de ganhar a aposta')
+  parser.add_argument('-g','--goal', type=int, default=5, help='Objetivo do jogador')
+  parser.add_argument('-n','--num_sim', type=int, default=1, help='Número máximo de iterações')
   return parser.parse_args()
 
 if __name__ == "__main__":
@@ -60,7 +60,7 @@ if __name__ == "__main__":
   bet_amount = args.bet_amount
   win_prob = args.win_prob
   goal = args.goal
-  max_iter = args.max_iter
+  num_sim = args.num_sim
 
   # Imprime estado inicial
   print(f'Capital inicial: {initial_capital}')
@@ -68,7 +68,7 @@ if __name__ == "__main__":
   print(f'Valor da aposta: {bet_amount}\n')
 
   # Executa simulação
-  for _ in range(max_iter):
+  for _ in range(num_sim):
     print(f'{SIM_COLOR}{SIM_BACKGROUND_COLOR}Simulação {(_+1):02d}{RESET_COLOR}')
     gambler = Gambler(initial_capital, bet_amount, win_prob)
     run(gambler, goal)

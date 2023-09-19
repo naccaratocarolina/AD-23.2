@@ -53,11 +53,11 @@ Tempo final da simulação: 3.12
 ### Flags do Programa
 | Flag                | Definição                          | Default |
 |---------------------|------------------------------------|---------|
-| --initial-capital   | Capital inicial do jogador         | 1       |
-| --bet-amount        | Valor da aposta                    | 1       |
-| --win-prob          | Probabilidade de ganhar a aposta   | 0.5     |
-| --goal              | Objetivo do jogador                 | 5       |
-| --max-iter          | Número máximo de iterações          | 3       |
+| -c ou --initial-capital   | Capital inicial do jogador         | 1       |
+| -b ou --bet-amount        | Valor da aposta                    | 1       |
+| -w ou --win-prob          | Probabilidade de ganhar a aposta   | 0.5     |
+| -g ou --goal              | Objetivo do jogador                 | 5       |
+| -n ou --max-iter          | Número máximo de iterações          | 1       |
 
 ### Como executar o programa
 Para executar o programa, você pode usar o seguinte comando:
