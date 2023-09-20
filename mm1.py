@@ -125,7 +125,7 @@ def parse_flags():
   parser = argparse.ArgumentParser(description='Simulação de fila M/M/1')
   parser.add_argument('-a', '--arrival_rate', type=float, default=2, help='Taxa de chegada de clientes')
   parser.add_argument('-s', '--service_rate', type=float, default=1, help='Taxa de serviço do servidor')
-  parser.add_argument('-m', '--max_iter', type=int, default=50, help='Número máximo de iterações')
+  parser.add_argument('-m', '--max_iter', type=int, default=-1, help='Número máximo de iterações')
   parser.add_argument('-q', '--queue_len', type=int, default=-1, help='Tamanho da fila M/M/1')
   parser.add_argument('-i', '--idle_server', type=bool, default=False, help='Servidor pode ficar ocioso')
   parser.add_argument('-n', '--num_sim', type=int, default=1, help='Número de simulações')
