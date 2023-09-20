@@ -7,15 +7,37 @@ Este programa simula uma fila M/M/1, que é um modelo de fila com uma única ser
 |------|-----------|---------|
 | -a ou --arrival_rate | Taxa de chegada de clientes | 2 |
 | -s ou --service_rate | Taxa de serviço do servidor | 1 |
-| -m ou --max_iter | Número máximo de iterações | 50 |
+| -m ou --max_iter | Número máximo de iterações | -1 (sem limite de iterações) |
 | -q ou --queue_len | Tamanho da fila M/M/1 | -1 (fila infinita) |
-| -i ou --idle_server | Define se o servidor pode ficar ocioso | False |
+| -i ou --idle_server | Define se o servidor pode ficar ocioso <sub>(True indica que a simulação vai ser executada até a fila esvaziar. False significa que o servidor pode ou não ficar oscioso)</sub>| False |
 | -n ou --num_sim | Número de simulações a serem executadas | 1 |
 
 ### Como executar o programa
 Para executar o programa, você pode usar o seguinte comando:
 ```sh
 python3 mm1.py -a ARRIVAL_RATE -s SERVICE_RATE -m MAX_ITER -q QUEUE_LEN -i IDLE_SERVER -n NUM_SIM
+```
+
+### Diferentes cenários para execução do programa
+1. Simula até o número máximo de iterações (fila pode ficar osciosa)
+```sh
+python3 mm1.py -m 50
+```
+
+2. Simula até o número máximo de iterações ou até o servidor ficar oscioso
+```sh
+python3 mm1.py -m 50 -i True
+```
+
+3. Simula até a fila ficar vazia / servidor oscioso
+```sh
+python3 mm1.py -i True
+```
+<sub><sub>Pode acontecer da fila nunca ficar vazia</sub></sub>
+
+1. Simula infinitamente
+```sh
+python3 mm1.py
 ```
 
 #### Exemplo de execução:
@@ -67,7 +89,7 @@ python3 gamblerruin.py --initial-capital INITIAL_CAPITAL --bet-amount BET_AMOUNT
 
 #### Exemplo de execução:
 ```sh
-python3 gamblerruin.py --initial-capital 1 --bet-amount 1 --win-prob 0.4 --goal 5 --max-iter 5
+python3 gamblerruin.py -c 1 -b 1 -w 0.4 --g 5 -m 5
 ```
 Neste exemplo, a simulação será executada com um capital inicial de 1, um valor de aposta de 1, uma probabilidade de ganhar a aposta de 40%, um objetivo de 5 e um número máximo de iterações de 5.
 
