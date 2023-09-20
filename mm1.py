@@ -1,14 +1,6 @@
 import numpy as np
-import argparse
 from collections import deque
-
-# Cores para print
-SIM_COLOR = '\033[30m' # Preto
-SIM_BACKGROUND_COLOR = '\033[47m' # Fundo branco
-ARRIVAL_COLOR = '\033[33m' # Amarelo
-DEPARTURE_COLOR = '\033[34m' # Azul
-IDLE_COLOR = '\033[35m' # Magenta
-RESET_COLOR = '\033[0m'
+from public.common import *
 
 class MM1:
   def __init__(self, arrival_rate, service_rate, max_iter, queue_len):
@@ -45,7 +37,7 @@ class MM1:
     self.queue.append(self.clock)
     
     # Imprime log
-    print(f'{ARRIVAL_COLOR}{self.clock:.2f}: Cliente chega{RESET_COLOR} N = {len(self.queue)}')
+    mm1_log(f'Cliente chega{RESET_COLOR} N = {len(self.queue)}', self.clock, 'arrival')
     
     # Se o servidor estiver ocioso, o cliente é atendido imediatamente
     if len(self.queue) == 1:
@@ -68,10 +60,10 @@ class MM1:
       self.idle_times.append(idle_time)
       self.is_idle = (False, 0)
       # Imprime tempo que o servidor ficou oscioso
-      print(f'{IDLE_COLOR}{self.clock:.2f}: Servidor volta a atender clientes após {idle_time:.2f}{RESET_COLOR}')
+      mm1_log(f'Servidor volta a atender clientes após {idle_time:.2f}{RESET_COLOR}', self.clock, 'idle')
     
     # Imprime log
-    print(f'{DEPARTURE_COLOR}{self.clock:.2f}: Cliente é atendido{RESET_COLOR} Tempo de espera: {wait_time:.2f}')
+    mm1_log(f'Cliente é atendido{RESET_COLOR} Tempo de espera: {wait_time:.2f}', self.clock, 'departure')
 
     # Se houver clientes na fila, agenda a partida do próximo cliente
     if len(self.queue) > 0:
@@ -79,7 +71,7 @@ class MM1:
     # Se não houver clientes na fila, o servidor fica ocioso
     else:
       self.is_idle = (True, self.clock)
-      print(f'{IDLE_COLOR}{self.clock:.2f}: Servidor ocioso {RESET_COLOR}N = {len(self.queue)}')
+      mm1_log(f'Servidor ocioso {RESET_COLOR}N = {len(self.queue)}', self.clock, 'idle')
       self.next_departure = float('inf') # Força com que o proximo evento seja uma chegada
   
   def handle_events(self):
@@ -118,23 +110,14 @@ class MM1:
       # Simula infinitamente
       while True:
         self.handle_events()
+
+    print() # Pula uma linha
   
     return len(self.wait_times), self.clock
 
-def parse_flags():
-  parser = argparse.ArgumentParser(description='Simulação de fila M/M/1')
-  parser.add_argument('-a', '--arrival_rate', type=float, default=2, help='Taxa de chegada de clientes')
-  parser.add_argument('-s', '--service_rate', type=float, default=1, help='Taxa de serviço do servidor')
-  parser.add_argument('-m', '--max_iter', type=int, default=-1, help='Número máximo de iterações')
-  parser.add_argument('-q', '--queue_len', type=int, default=-1, help='Tamanho da fila M/M/1')
-  parser.add_argument('-i', '--idle_server', type=bool, default=False, help='Servidor pode ficar ocioso')
-  parser.add_argument('-n', '--num_sim', type=int, default=1, help='Número de simulações')
-  
-  return parser.parse_args()
-
 if __name__ == '__main__':
   # Parsear flags
-  args = parse_flags()
+  args = mm1_parse_flags()
   arrival_rate = args.arrival_rate
   service_rate = args.service_rate
   max_iter = args.max_iter
@@ -144,12 +127,12 @@ if __name__ == '__main__':
 
   # Inicializar simulação
   for _ in range(num_sim):
-    print(f'{SIM_COLOR}{SIM_BACKGROUND_COLOR}Simulação {(_+1):02d}{RESET_COLOR}')
+    sim_log(f'Simulação {(_+1):02d}')
     mm1_sim = MM1(arrival_rate, service_rate, max_iter, queue_len)
     num_customers, final_time = mm1_sim.run_simulation(idle_server)
 
     # Imprimir estatísticas
-    print('\nEstatísticas:')
+    sim_log('Estatísticas:')
     print(f'Número de clientes atendidos: {num_customers}')
     print(f'Tempo médio de espera: {np.mean(mm1_sim.wait_times):.2f}')
     if len(mm1_sim.idle_times):
