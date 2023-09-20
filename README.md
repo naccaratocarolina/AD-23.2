@@ -33,9 +33,9 @@ python3 mm1.py -m 50 -i True
 ```sh
 python3 mm1.py -i True
 ```
-<sub><sub>Pode acontecer da fila nunca ficar vazia</sub></sub>
+<sub><sub>Pode acontecer da fila nunca ficar vazia e o programa rodar infinitamente</sub></sub>
 
-1. Simula infinitamente
+4. Simula infinitamente
 ```sh
 python3 mm1.py
 ```
