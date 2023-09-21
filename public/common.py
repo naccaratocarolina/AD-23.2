@@ -16,6 +16,7 @@ WIN_COLOR = '\033[32m' # Verde
 
 # Log de simulação
 def sim_log(msg):
+  print() # Pula uma linha
   print(f'{SIM_COLOR}{SIM_BACKGROUND_COLOR}{msg}{RESET_COLOR}')
 
 # Log de MM1
