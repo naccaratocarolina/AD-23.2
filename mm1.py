@@ -24,6 +24,7 @@ class MM1:
     self.next_departure = float('inf')  # Próxima partida (igual a infinito para forçar a chegada do primeiro cliente)
 
     # Listas de tempos para cálculo de estatísticas
+    self.queue_len = [] # Lista de tamanhos da fila a cada iteração
     self.wait_times = [] # Lista de tempos de espera dos clientes
     self.service_times = [] # Lista de tempos de serviço dos clientes
     self.idle_times = [] # Lista de tempos ociosos do servidor
@@ -64,23 +65,29 @@ class MM1:
       self.idle_times.append((self.clock, idle_time))
       self.is_idle = (False, 0)
       # Imprime tempo que o servidor ficou oscioso
-      mm1_log(f'Servidor volta a atender clientes após {idle_time:.2f}{RESET_COLOR}', self.clock, 'idle')
+      mm1_log(f'Servidor volta a atender clientes após {idle_time:.4f}{RESET_COLOR}', self.clock, 'idle')
     
     # Imprime log
-    mm1_log(f'Cliente é atendido{RESET_COLOR} Tempo de espera: {wait_time:.2f}', self.clock, 'departure')
+    mm1_log(f'Cliente é movido para o atendimento{RESET_COLOR} Tempo de espera: {wait_time:.4f}', self.clock, 'move')
 
-    # Se houver clientes na fila, agenda a partida do próximo cliente
+    # Atualiza clock após o serviço
+    service_time = self.next_departure
+    self.clock += service_time
+    self.service_times.append((self.clock, service_time))
+    mm1_log(f'Cliente é atendido{RESET_COLOR} Tempo de serviço: {service_time:.4f}', self.clock, 'departure')
+
     if len(self.queue) > 0:
-      service_time = self.generate_next_departure()
-      self.next_departure = self.clock + service_time
-      self.service_times.append((self.clock, service_time))
-    # Se não houver clientes na fila, o servidor fica ocioso
+      # Se houver clientes na fila, agenda a partida do próximo cliente
+      self.next_departure = self.clock + self.generate_next_departure()
     else:
+      # Se não houver clientes na fila, o servidor fica ocioso
       self.is_idle = (True, self.clock)
       mm1_log(f'Servidor ocioso {RESET_COLOR}N = {len(self.queue)}', self.clock, 'idle')
       self.next_departure = float('inf') # Força com que o proximo evento seja uma chegada
   
   def handle_events(self):
+    self.queue_len.append((self.clock, len(self.queue)))
+
     # Verifica qual evento ocorreu primeiro
     if self.next_arrival < self.next_departure:
       # Trata a chegada
@@ -129,7 +136,7 @@ if __name__ == '__main__':
   idle_server = args.idle_server
   num_sim = args.num_sim
 
-  #np.random.seed(13)
+  np.random.seed(4823472)
 
   # Inicializar simulação
   for _ in range(num_sim):
@@ -143,8 +150,3 @@ if __name__ == '__main__':
     stats = Stats(mm1_sim)
     stats.stats(num_customers, final_time)
 
-    # stats.plot_avg_queue_len()
-    # stats.plot_avg_wait_time()
-    # stats.plot_avg_service_time()
-    # stats.plot_avg_idle_server()
-    stats.avg_times()
