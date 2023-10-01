@@ -147,6 +147,6 @@ if __name__ == '__main__':
     # Imprimir estatísticas
     sim_log('Estatísticas:')
 
-    stats = Stats(mm1_sim)
+    stats = MM1Stats(mm1_sim)
     stats.stats(num_customers, final_time)
 
