@@ -3,12 +3,15 @@ import argparse
 # Cores para print
 SIM_COLOR = '\033[30m' # Preto
 SIM_BACKGROUND_COLOR = '\033[47m' # Fundo branco
+BOLD = '\033[1m' # Negrito
 RESET_COLOR = '\033[0m' # Resetar cor
 
 # MM1
-ARRIVAL_COLOR = '\033[33m' # Amarelo
-DEPARTURE_COLOR = '\033[34m' # Azul
-IDLE_COLOR = '\033[35m' # Magenta
+ARRIVAL_COLOR = '\033[93m' # Amarelo
+DEPARTURE_COLOR = '\033[94m' # Azul
+IDLE_COLOR = '\033[95m' # Pink
+MOVE_COLOR = '\033[96m' # Cyan
+STATS_COLOR = '\033[33m' # Laranja
 
 # Gambler
 LOSS_COLOR = '\033[31m' # Vermelho
@@ -23,6 +26,8 @@ def sim_log(msg):
 def mm1_log(msg, clock, type):
   if type == 'arrival':
     print(f'{ARRIVAL_COLOR}{clock:.2f}: {msg}{RESET_COLOR}')
+  elif type == 'move':
+    print(f'{MOVE_COLOR}{clock:.2f}: {msg}{RESET_COLOR}')
   elif type == 'departure':
     print(f'{DEPARTURE_COLOR}{clock:.2f}: {msg}{RESET_COLOR}')
   elif type == 'idle':
