@@ -1,5 +1,6 @@
 import random
 from public.common import *
+from public.stats import *
 
 class Gambler:
   def __init__(self, initial_capital, bet_amount, win_prob):
@@ -51,3 +52,7 @@ if __name__ == "__main__":
     gambler = Gambler(initial_capital, bet_amount, win_prob)
     run(gambler, goal)
     gambler_result(gambler, goal)
+    
+    # Imprime log de capital
+    stats = GamblerStats(gambler)
+    stats.stats()

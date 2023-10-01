@@ -3,7 +3,7 @@ import matplotlib.gridspec as gridspec
 import numpy as np
 from public.common import *
 
-class Stats():
+class MM1Stats():
   def __init__(self, mm1):
     self.mm1 = mm1 # Simulação MM1
     self.rho = mm1.arrival_rate / mm1.service_rate # Fator de utilização ρ = λ/μ
@@ -284,3 +284,36 @@ class Stats():
 
     # Gráficos
     self.plot_all()
+
+class GamblerStats():
+  def __init__(self, gambler):
+    self.gambler = gambler # Simulação Gambler
+  
+  def avg_capital(self):
+    sum = 0
+    num_iter = len(self.gambler.capital_log)
+
+    for _, capital in self.gambler.capital_log:
+      sum += capital
+    
+    return sum / num_iter
+  
+  def plot_capital(self):
+    i, capital = zip(*self.gambler.capital_log)
+
+    plt.figure(figsize=(16, 10))
+    plt.plot(i, capital)
+    plt.xlabel('Iteração')
+    plt.ylabel('Capital')
+    plt.title('Montante Total por Iteração', fontsize=20)
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+  
+  def stats(self):
+    # Capital médio
+    avg_capital = self.avg_capital()
+    print(f'Capital médio: {STATS_COLOR}{avg_capital:.2f}{RESET_COLOR}')
+
+    # Gráfico
+    self.plot_capital()
