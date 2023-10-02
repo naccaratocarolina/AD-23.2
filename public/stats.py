@@ -4,9 +4,10 @@ import numpy as np
 from public.common import *
 
 class MM1Stats():
-  def __init__(self, mm1):
+  def __init__(self, mm1, final_time):
     self.mm1 = mm1 # Simulação MM1
     self.rho = mm1.arrival_rate / mm1.service_rate # Fator de utilização ρ = λ/μ
+    self.final_time = final_time # Tempo final da simulação
   
   def confidence_interval(self, data):
     n = len(data)
@@ -45,11 +46,15 @@ class MM1Stats():
     ax.legend()
     ax.grid(True)
   
-  # Número médio analítico de pessoas na fila (Lei de Little)
-  def avg_queue_len_analytic(self):
-    if self.rho >= 1:
+  def avg_clients_in_queue(self, rho):
+    if rho >= 1:
       return float('inf')
-    return self.rho**2/(1 - self.rho)
+    return rho / (1 - rho)
+  
+  def sim_rates(self):
+    arrival_rate_sim = len(self.mm1.arrival_times) / self.final_time
+    service_rate_sim = len(self.mm1.service_times) / self.final_time
+    return (arrival_rate_sim, service_rate_sim)
 
   # Número médio simulado de pessoas na fila
   def avg_queue_len_sim(self):
@@ -57,15 +62,11 @@ class MM1Stats():
     if num_iter == 0:
       return (0, [])
 
-    queue_len = [e[1] for e in self.mm1.queue_len]
-    total_queue_mean = 0
-
-    # Calcula tamanho total medio da fila
-    if self.mm1.queue:  # Verifica se a fila não está vazia
-      final_queue_len = len(self.mm1.queue)
-      total_queue_mean = (sum(queue_len) + final_queue_len) / (len(queue_len) + final_queue_len)
-    else:
-      total_queue_mean = sum(queue_len) / len(queue_len)
+    # Calcula taxa de chegada e taxa de serviço simulada
+    arrival_rate_sim, service_rate_sim = self.sim_rates()
+    print(arrival_rate_sim, service_rate_sim)
+    rho_sim = arrival_rate_sim / service_rate_sim
+    avg_clients_sim = self.avg_clients_in_queue(rho_sim)
     
     avg_len = []
     queue_len_by_iter = 0
@@ -75,7 +76,7 @@ class MM1Stats():
       queue_len_by_iter += queue_len
       avg_len.append(queue_len_by_iter / i)
     
-    return (total_queue_mean, avg_len)    
+    return (avg_clients_sim, avg_len)    
 
   def plot_avg_queue_len(self, ax):
     # Calcular tamanho médio da fila simulado
@@ -234,11 +235,11 @@ class MM1Stats():
     
     # Número médio de clientes na fila (Simulado e analítico)
     avg_clients, _ = self.avg_queue_len_sim()
-    avg_clients_analytic = self.avg_queue_len_analytic()
+    avg_clients_analytic = self.avg_clients_in_queue(self.rho)
     if avg_clients > 0:
       print('Número médio de clientes na fila:')
-      print(f'  {BOLD}Simulado{RESET_COLOR}: {STATS_COLOR}{avg_clients:.2f}{RESET_COLOR}')
-      print(f'  {BOLD}Analítico{RESET_COLOR}: {STATS_COLOR}{avg_clients_analytic:.2f}{RESET_COLOR}')
+      print(f'  {BOLD}Simulado{RESET_COLOR}: {STATS_COLOR}{avg_clients}{RESET_COLOR}')
+      print(f'  {BOLD}Analítico{RESET_COLOR}: {STATS_COLOR}{avg_clients_analytic}{RESET_COLOR}')
 
     # Tempo médio de espera
     _, avg_wait = self.avg_wait_time()
@@ -283,7 +284,7 @@ class MM1Stats():
     print(f'Tempo final da simulação: {STATS_COLOR}{final_time:.2f}{RESET_COLOR}')
 
     # Gráficos
-    self.plot_all()
+    # self.plot_all()
 
 class GamblerStats():
   def __init__(self, gambler):
