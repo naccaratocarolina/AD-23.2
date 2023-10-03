@@ -1,5 +1,6 @@
 import numpy as np
 
+ARRIVAL_COLOR = '\033[93m' # Amarelo
 DEPARTURE_COLOR = '\033[94m' # Azul
 END_COLOR = '\033[0m' # Branco
 
@@ -15,28 +16,29 @@ class Arrival(Event):
   def __init__(self, arrival_rate):
     self.arrival_rate = arrival_rate
     self.next_arrival = self.generate_next_arrival(arrival_rate)
-    self.color = '\033[93m' # Amarelo
     super().__init__('Arrival', self.next_arrival)
 
   def generate_next_arrival(self, arrival_rate):
     return np.random.exponential(1 / arrival_rate)
   
-  def __str__(self):
-    return f'{self.color}{self.type} Tempo entre chegadas: {self.priority:.2f}{END_COLOR}'
+  def log(self, clock, is_first=False):
+    if is_first:
+      print(f'{ARRIVAL_COLOR}{clock:.2f}: {self.type} Primeira chegada{END_COLOR}')
+    else:
+      print(f'{ARRIVAL_COLOR}{clock:.2f}: {self.type} Tempo entre chegadas: {self.priority:.2f}{END_COLOR}')
 
 class Departure(Event):
   def __init__(self, service_rate):
     self.service_rate = service_rate
     self.next_departure = self.generate_next_departure(service_rate)
-    self.color = '\033[94m' # Azul
     super().__init__('Departure', self.next_departure)
 
   def generate_next_departure(self, service_rate):
     return np.random.exponential(1 / service_rate)
   
-  def __str__(self):
-    return f'{self.color}{self.type} Tempo de serviço: {self.priority:.2f}{END_COLOR}'
-
+  def log(self, clock):
+    print(f'{DEPARTURE_COLOR}{clock:.2f}: {self.type} Tempo de serviço: {self.priority:.2f}{END_COLOR}')
+  
 class PriorityQueue():
   def __init__(self, max_size):
     self.queue = []
@@ -45,7 +47,7 @@ class PriorityQueue():
   def __str__(self):
     if self.isEmpty():
       return '[]'
-    return f'[{", ".join([x.type for x in self.queue])}]'
+    return f'[{", ".join([str(event) for event in self.queue])}]'
 
   def isEmpty(self):
     return len(self.queue) == 0
@@ -117,45 +119,50 @@ class MM1Simulation(Simulation):
   def generate_departure(self):
     return Departure(self.service_rate)
   
+  def arrival(self):
+    next_arrival = self.generate_arrival()
+    self.schedule_event(next_arrival)    
+    return next_arrival
+  
+  def departure(self):
+    # Gera proximo evento de saida
+    next_departure = self.generate_departure()
+    self.schedule_event(next_departure)
+    self.is_running = True
+    return next_departure
+  
   def process_event(self, event):
     if event.type == 'Arrival':
-      # Gera próximo evento de chegada
-      next_arrival = self.generate_arrival()
+      # Gera próximo evento de chegada se houver espaço na fila
+      self.arrival()
 
-      # Agenda evento de chegada
-      self.schedule_event(next_arrival)
-
-      # Se servidor estiver livre, gera evento de saída
-      if self.events.isEmpty():
-        next_departure = self.generate_departure()
-        self.schedule_event(next_departure)
+      # Se servidor estiver livre, cliente é atendido imediatamente
+      if not self.is_running:
+        self.departure()
       else:
-        # Se servidor estiver ocupado, verifica se há espaço na fila
+        # Se servidor estiver ocupado e fila não estiver cheia, cliente entra na fila
         if not self.events.isFull():
-          # Se houver espaço na fila, adiciona evento de saída
-          next_departure = self.generate_departure()
-          self.schedule_event(next_departure)
+          self.departure()
         else:
-          # Se não houver espaço na fila, cliente vai embora
-          print(f'{self.clock:.2f}: Cliente desprezado')
+          # Se a fila estiver cheia, cliente vai embora
+          print(f'{self.clock:.2f}: Cliente desprezado Fila cheia: {self.events}')
           pass
     elif event.type == 'Departure':
       # Gera próximo evento de saída
-      next_departure = self.generate_departure()
-
-      # Agenda evento de saída
-      self.schedule_event(next_departure)
+      self.departure()
+  
+  def is_idle(self):
+    return not any([event.type == 'Departure' for event in self.events.queue])
   
   def run(self):
     self.is_running = True
 
     # Simulação começa com a chegada do primeiro cliente
-    first_arrival = self.generate_arrival()
-    self.schedule_event(first_arrival)
+    first_arrival = self.arrival()
+    # print(self.events)
+    first_arrival.log(self.clock, True)
 
-    condition = self.clock < self.simulation_time and self.is_running
-
-    while condition:
+    while self.clock < self.simulation_time:
       event = self.events.pop()
       self.clock += event.priority
 
@@ -165,18 +172,14 @@ class MM1Simulation(Simulation):
       
       self.process_event(event)
       # print(self.events)
-      print(f'{self.clock:.2f}: {event}')
-
-    self.is_running = False
+      event.log(self.clock)
 
 if __name__ == '__main__':
   max_size = 4
-  max_time = 20
+  max_time = 10
   arrival_rate = 0.5
   service_rate = 0.5
   
   mm1 = MM1Simulation(arrival_rate, service_rate, max_size, max_time)
   mm1.run()
   
-
-
