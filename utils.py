@@ -36,14 +36,13 @@ class PriorityQueue():
       print(f'A fila está cheia. Evento {event} desprezado')
       return
     self.queue.append(event)
+    self.queue = sorted(self.queue, key=lambda event: event.priority)
   
   def dequeue(self):
     if self.isEmpty():
       print('A fila está vazia')
       return
-    removed = self.sort(self.queue, key=lambda event: event.priority)
-    self.queue.remove(removed)
-    return removed
+    return self.queue.pop(0)  
   
   def __str__(self):
     if self.isEmpty():
