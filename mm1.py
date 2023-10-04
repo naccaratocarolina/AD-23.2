@@ -1,6 +1,7 @@
 import numpy as np
 
 BLUE = '\033[94m'
+CYAN = '\033[96m'
 GREEN = '\033[92m'
 RED = '\033[91m'
 ORANGE = '\033[93m'
@@ -64,7 +65,7 @@ def mm1_simulation(arrival_rate, service_rate, max_iter, max_queue_len):
     if event.type == 'Departure':
       if N > 0:
         if not is_busy:
-          print(f'{BLUE}{clock:.2f}: Servidor ocupado novamente (N = {N}){END}')
+          print(f'{CYAN}{clock:.2f}: Servidor volta a atender (N = {N}){END}')
         N -= 1
         is_busy = True
         schedule_event('Departure', clock + generate_next_departure(service_rate))
@@ -82,9 +83,9 @@ def mm1_simulation(arrival_rate, service_rate, max_iter, max_queue_len):
         break
 
 def main():
-  arrival_rate = 10
-  service_rate = 1
-  max_iter = 50
+  arrival_rate = 1
+  service_rate = 2
+  max_iter = 10
   max_queue_len = 5
 
   mm1_simulation(arrival_rate, service_rate, max_iter, max_queue_len)
