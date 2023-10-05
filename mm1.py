@@ -7,13 +7,13 @@ GREEN = '\033[92m'
 RED = '\033[91m'
 YELLOW = '\033[93m'
 ORANGE = '\033[33m'
-WHITE = '\033[37m'
-BLACK_BG = '\033[40m'
+BLACK_BG = '\033[40;37m'
 END = '\033[0m'
 
 def print_message(msg, color, clock, verbose):
   if verbose:
-    print(f'{color}{clock:.2f}: {msg}{END}')
+    clock = round(clock, 2) if clock > -1 else ''
+    print(f'{color}{clock} {msg}{END}')
 
 # ================================
 # Evento
@@ -30,6 +30,7 @@ class Event:
 # ================================
 # M/M/1
 # ================================
+CURRENT_ITERATION = 0
 
 def generate_next_arrival(arrival_rate):
   return np.random.exponential(1/arrival_rate)
@@ -41,6 +42,8 @@ def print_queue(L):
   print(f'[{", ".join([str(event) for event in L])}]')
 
 def mm1_simulation(arrival_rate, service_rate, max_iter, max_queue_len, verbose=True):
+  print_message(f'Iteração #{CURRENT_ITERATION}', BLACK_BG, -1, verbose)
+  print_message(f'Chegada: {arrival_rate} | Partida: {service_rate} | Iterações: {max_iter} | Tamanho máximo da fila: {max_queue_len}', BLACK_BG, -1, verbose)
   L = [] # Lista de eventos (Fila de prioridades)
   N = 0 # Número de clientes na fila (variavel de estado)
   clock = 0
@@ -96,15 +99,8 @@ def mm1_simulation(arrival_rate, service_rate, max_iter, max_queue_len, verbose=
 
     max_iter -= 1 # Decrementa variável de controle
   
+  print()
   return total_wait_time, customer_number # Retorna métrica e número de clientes
-
-def mm1(arrival_rate, service_rate, max_iter, max_queue_len, i=2):
-  counter = 0
-  while counter < i:
-    print(f'{BLACK_BG}{WHITE}Simulação #{counter+1}{END}')
-    mm1_simulation(arrival_rate, service_rate, max_iter, max_queue_len)
-    print()
-    counter += 1
  
 # ================================
 # Ruína do Apostador
@@ -143,7 +139,7 @@ def gambler_ruin(probability, goal, starting_amount, verbose=True):
 def gambler(win_probability, goal, starting_amount, i=2):
   counter = 0
   while counter < i:
-    print(f'{BLACK_BG}{WHITE}Simulação #{counter+1}{END}')
+    print(f'{PURPLE}Simulação #{counter+1}{END}')
     gambler_ruin(win_probability, goal, starting_amount)
     print()
     counter += 1
@@ -159,7 +155,9 @@ def gambler(win_probability, goal, starting_amount, i=2):
 def wait_time(i, func, *args):
   avg_wait_times = [] # Lista com tempos médios de cada iteração i
   
-  for _ in range(i):
+  for curr in range(i):
+    global CURRENT_ITERATION
+    CURRENT_ITERATION = curr + 1
     total_wait_time, k = func(*args) # Executa simulação
     avg_wait_time = total_wait_time / k
     avg_wait_times.append(avg_wait_time)
@@ -167,11 +165,11 @@ def wait_time(i, func, *args):
   return avg_wait_times
 
 def main():
-  result = wait_time(10, mm1_simulation, 0.5, 1, 10, -1, False)
+  result = wait_time(10, mm1_simulation, 0.5, 1, 10, -1, True)
   print(result)
   # mm1(0.5, 1, 10, -1, 1)
   # print()
-  gambler(0.5, 5, 2, 4)
+  # gambler(0.5, 5, 2, 4)
 
 if __name__ == '__main__':
   main()
