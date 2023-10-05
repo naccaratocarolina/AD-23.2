@@ -41,9 +41,9 @@ def generate_next_departure(service_rate):
 def print_queue(L):
   print(f'[{", ".join([str(event) for event in L])}]')
 
-def mm1_simulation(arrival_rate, service_rate, max_iter, max_queue_len, verbose=True):
+def mm1_simulation(arrival_rate, service_rate, max_events, max_queue_len, verbose=True):
   print_message(f'Iteração #{CURRENT_ITERATION}', BLACK_BG, -1, verbose)
-  print_message(f'Chegada: {arrival_rate} | Partida: {service_rate} | Iterações: {max_iter} | Tamanho máximo da fila: {max_queue_len}', BLACK_BG, -1, verbose)
+  print_message(f'Chegada: {arrival_rate} | Partida: {service_rate} | Iterações: {max_events} | Tamanho máximo da fila: {max_queue_len}', BLACK_BG, -1, verbose)
   L = [] # Lista de eventos (Fila de prioridades)
   N = 0 # Número de clientes na fila (variavel de estado)
   clock = 0
@@ -63,7 +63,7 @@ def mm1_simulation(arrival_rate, service_rate, max_iter, max_queue_len, verbose=
   # Plano de controle (enquanto a fila não estiver vazia e o número máximo de
   # iterações não for atingido)
   is_busy = True
-  while len(L) > 0 and max_iter > 0:
+  while len(L) > 0 and max_events > 0:
     e = L.pop(0) # Remove evento e da fila (de prioridades) de eventos
     wait_time = e.timestamp - clock # Calcula tempo de espera
     clock = e.timestamp # Atualiza relógio
@@ -97,7 +97,7 @@ def mm1_simulation(arrival_rate, service_rate, max_iter, max_queue_len, verbose=
       print_message(f'Servidor fica ocioso (N = {N})', BLUE, clock, verbose)
       is_busy = False
 
-    max_iter -= 1 # Decrementa variável de controle
+    max_events -= 1 # Decrementa variável de controle
   
   print()
   return total_wait_time, customer_number # Retorna métrica e número de clientes
