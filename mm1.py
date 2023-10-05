@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib.pyplot as plt
+import math
 
 BLUE = '\033[94m'
 PURPLE = '\033[95m'
@@ -49,6 +51,18 @@ def mm1_simulation(arrival_rate, service_rate, max_events, max_queue_len, verbos
   clock = 0
   customer_number = 0 
   total_wait_time = 0 # Métrica importante para estatísticas
+  # Variáveis auxiliares para calcular secundárias:
+  #   tempo de espera médio, tempo de serviço médio, tempo de resposta médio,
+  #   taxa de utilização do servidor
+  N_list = [] # Lista de número de clientes na fila a cada evento
+  clock_list = [] # Lista de tempos de cada evento
+  wait_time_list = [] # Lista de tempos de espera de cada evento
+  mean_N = [] # Lista de médias do núm de clientes na fila a cada evento
+  mean_clocks = [] # Lista de médias dos tempos de cada evento
+  mean_wait_times = [] # Lista de médias dos tempos de espera de cada evento
+  meanN = 0 # Média do número de clientes na fila
+  meanClock = 0 # Média do tempo de cada evento
+  meanWaitTime = 0 # Média do tempo de espera de cada evento
 
   def schedule_event(type, timestamp):
     nonlocal customer_number  # Permite acesso à variável customer_number declarada fora da função
@@ -98,9 +112,29 @@ def mm1_simulation(arrival_rate, service_rate, max_events, max_queue_len, verbos
       is_busy = False
 
     max_events -= 1 # Decrementa variável de controle
+
+    # Calcula as métricas adicionais
+    if (len(N_list) > 0 and len(clock_list) > 0):
+      meanN += N_list[-1] * (clock - clock_list[-1])
+      meanClock += (clock - clock_list[-1]) * len(N_list)
+      meanWaitTime += wait_time_list[-1] * len(N_list)
+    N_list.append(N)
+    clock_list.append(clock)
+    wait_time_list.append(wait_time)
+    mean_N.append(meanN / clock if clock > 0 else 0)
+    mean_clocks.append(meanClock / N if N > 0 else 0)
+    mean_wait_times.append(meanWaitTime / N if N > 0 else 0)
   
   print()
-  return total_wait_time, customer_number # Retorna métrica e número de clientes
+  metrics = {
+    'N': N_list,
+    'Clock': clock_list,
+    'WaitTime': wait_time_list,
+    'MeanN': mean_N,
+    'MeanClock': mean_clocks,
+    'MeanWaitTime': mean_wait_times
+  }
+  return total_wait_time, customer_number, metrics # Retorna métrica e número de clientes
  
 # ================================
 # Ruína do Apostador
@@ -158,15 +192,47 @@ def wait_time(i, func, *args):
   for curr in range(i):
     global CURRENT_ITERATION
     CURRENT_ITERATION = curr + 1
-    total_wait_time, k = func(*args) # Executa simulação
+    total_wait_time, k, metrics = func(*args) # Executa simulação
     avg_wait_time = total_wait_time / k
     avg_wait_times.append(avg_wait_time)
   
-  return avg_wait_times
+  return avg_wait_times, metrics
+
+def plotGraph(Ns, clocks, meanNs, meanCs, meanTs):
+  fig, ax = plt.subplots(figsize=(16,4))
+  fig, bx = plt.subplots(figsize=(16,4))
+  fig, cx = plt.subplots(figsize=(16,4))
+  NsInt = range(min(Ns), math.ceil(max(Ns)) + 1)
+  ax.set_yticks(NsInt)
+  # Plot the Ns data
+  ax.plot(clocks[:-1], Ns[:-1], drawstyle="steps-post", label="N")
+  # Plot the meanNs data
+  ax.plot(clocks[:-1], meanNs[:-1], linestyle="dashed", label="E[N]")
+  # Plot the meanCs data
+  bx.plot(clocks[:-1], meanCs[:-1], label="E[C]")
+  # Plot the meanTs data
+  cx.plot(clocks[:-1], meanTs[:-1], label="E[T]")
+  # Plot das labels
+  ax.set_xlabel("Clock")
+  bx.set_xlabel("Clock")
+  cx.set_xlabel("Clock")
+  ax.set_ylabel("N")
+  bx.set_ylabel("Tempo médio de espera (E[C])")
+  cx.set_ylabel("Tempo médio de espera (E[T])")
+  ax.set_title("Número de clientes (N) na fila versus Clock")
+  bx.set_title("Tempo médio de espera (E[C]) versus Clock")
+  cx.set_title("Tempo médio de espera (E[T]) versus Clock")
+  # Add a legend
+  ax.legend()
+  bx.legend()
+  cx.legend()
+  # Plot
+  plt.show()
 
 def main():
-  result = wait_time(10, mm1_simulation, 0.5, 1, 10, -1, True)
-  print(result)
+  avg_wait_times, metrics = wait_time(10, mm1_simulation, 0.5, 1, 10, -1, True)
+  print(avg_wait_times)
+  plotGraph(metrics['N'], metrics['Clock'], metrics['MeanN'], metrics['MeanClock'], metrics['MeanWaitTime'])
   # mm1(0.5, 1, 10, -1, 1)
   # print()
   # gambler(0.5, 5, 2, 4)
