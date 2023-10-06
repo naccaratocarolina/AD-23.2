@@ -221,11 +221,17 @@ def plot_area(func, *args, title='Não Definido', xlabel='Não Definido', ylabel
 def plot_n_by_time(func, *args, title='Não Definido', xlabel='Não Definido', ylabel='Não Definido', color='black'):
   global FONT_SIZE
   _, _, Nt = func(*args)
+
   if len(Nt) <= 1:
     return
+
   t, N = zip(*Nt)
   plt.figure(figsize=(20, 10))
   plt.plot(N, drawstyle='steps-post', linewidth=3, color=color)
+
+  mean_N = [sum(N[:i+1])/(i+1) for i in range(len(N))]
+  plt.plot(mean_N, linewidth=2, color='crimson', linestyle='--', label='E[Nt]')
+
   plt.title(title, fontsize=FONT_SIZE*1.1)
   plt.xlabel(xlabel, fontsize=FONT_SIZE)
   plt.ylabel(ylabel, fontsize=FONT_SIZE)
@@ -241,16 +247,7 @@ def plot_mm1(arrival_rate, service_rate, max_events, max_queue_len=-1, verbose=F
     title='Evolução do número de clientes no sistema',
     xlabel='Tempo',
     ylabel='N(t)',
-    color='green'
-  )
-
-  plot_area(
-    mm1_simulation,
-    arrival_rate, service_rate, max_events, max_queue_len, verbose,
-    title='Área sob a curva da evolução do número de clientes no sistema',
-    xlabel='Tempo',
-    ylabel='Área',
-    color='green'
+    color='navy'
   )
 
 def plot_gambler(probability, goal, starting_amount=1, verbose=False):
