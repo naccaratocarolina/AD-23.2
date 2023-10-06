@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 BLUE = '\033[94m'
 PURPLE = '\033[95m'
@@ -42,13 +43,19 @@ def print_queue(L):
   print(f'[{", ".join([str(event) for event in L])}]')
 
 def mm1_simulation(arrival_rate, service_rate, max_events, max_queue_len, verbose=True):
-  print_message(f'Iteração #{CURRENT_ITERATION}', BLACK_BG, -1, verbose)
-  print_message(f'Chegada: {arrival_rate} | Partida: {service_rate} | Iterações: {max_events} | Tamanho máximo da fila: {max_queue_len}', BLACK_BG, -1, verbose)
+  global CURRENT_ITERATION
+  CURRENT_ITERATION += 1
+  if verbose:
+    print_message(f'Iteração #{CURRENT_ITERATION}', BLACK_BG, -1, verbose)
+    print_message(f'Chegada: {arrival_rate} | Partida: {service_rate} | Iterações: {max_events} | Tamanho máximo da fila: {max_queue_len}', BLACK_BG, -1, verbose)
   L = [] # Lista de eventos (Fila de prioridades)
   N = 0 # Número de clientes na fila (variavel de estado)
   clock = 0
-  customer_number = 0 
-  total_wait_time = 0 # Métrica importante para estatísticas
+  customer_number = 0
+
+  # Métricas
+  total_wait_time = 0 # Tempo acumulado de espera na fila
+  A = [] # Lista de tuplas (tempo, N) para cálculo de área sob a curva
 
   def schedule_event(type, timestamp):
     nonlocal customer_number  # Permite acesso à variável customer_number declarada fora da função
@@ -63,10 +70,13 @@ def mm1_simulation(arrival_rate, service_rate, max_events, max_queue_len, verbos
   # Plano de controle (enquanto a fila não estiver vazia e o número máximo de
   # iterações não for atingido)
   is_busy = True
-  while len(L) > 0 and max_events > 0:
+  while len(L) > 0 and customer_number < max_events:
     e = L.pop(0) # Remove evento e da fila (de prioridades) de eventos
     wait_time = e.timestamp - clock # Calcula tempo de espera
     clock = e.timestamp # Atualiza relógio
+
+    # Tira uma "foto" do sistema (para estatísticas)
+    A.append((clock, N))
 
     # Sortear tempo da próxima chegada e agendar evento
     # Se N = 1, sortear tempo da próxima partida e agendar partida
@@ -97,10 +107,7 @@ def mm1_simulation(arrival_rate, service_rate, max_events, max_queue_len, verbos
       print_message(f'Servidor fica ocioso (N = {N})', BLUE, clock, verbose)
       is_busy = False
 
-    max_events -= 1 # Decrementa variável de controle
-  
-  print()
-  return total_wait_time, customer_number # Retorna métrica e número de clientes
+  return (total_wait_time, customer_number, A) # Retorna métricas
  
 # ================================
 # Ruína do Apostador
@@ -115,12 +122,15 @@ def generate_next_event(probability, timestamp):
 def gambler_ruin(probability, goal, starting_amount, verbose=True):
   amount = starting_amount # Equivalente a primeira chegada
   round = 0 # Número de rodadas ("clock")
+  M = []  # (Iteração, Montante)
 
   # Plano de controle (enquanto o apostador não atingir o objetivo ou falir)
   while amount > 0 and amount < goal:
     round += 1
     event = generate_next_event(probability, round)
     amount += event.id
+
+    M.append((round, amount))
 
     if event.type == 'Win':
       print_message(f'{round}: Jogador ganhou {event.id} | Montante: {amount}', PURPLE, round, verbose)
@@ -134,7 +144,7 @@ def gambler_ruin(probability, goal, starting_amount, verbose=True):
   else:
     print_message(f'O apostador faliu em {round} rodadas', RED, round, verbose)
   
-  return round # Retorna número de rodadas
+  return round, 0, M # Retorna número de rodadas
 
 def gambler(win_probability, goal, starting_amount, i=2):
   counter = 0
@@ -147,6 +157,16 @@ def gambler(win_probability, goal, starting_amount, i=2):
 # ================================
 # Estatísticas
 # ================================
+FONT_SIZE = 18
+
+# Variáveis de interesse:
+# Tempo mério de serviço (W) = Tempo médio de um cliente no sistema (fila + servidor)
+# Tempo médio de espera na fila (Wq) = Tempo médio de um cliente na fila
+# Número médio de clientes no sistema (N) = Média do número de clientes no sistema (fila + servidor)
+# Número médio de clientes na fila (Nq) = Média do número de clientes na fila
+# Utilização do servidor (U) = Fração de tempo que o servidor está ocupado
+
+
 
 # O sistema é simulado por i iterações. Cada iteração possui K clientes.
 # Seja W_i_k o tempo de espera do k-ésimo cliente na i-ésima iteração,
@@ -155,21 +175,98 @@ def gambler(win_probability, goal, starting_amount, i=2):
 def wait_time(i, func, *args):
   avg_wait_times = [] # Lista com tempos médios de cada iteração i
   
-  for curr in range(i):
-    global CURRENT_ITERATION
-    CURRENT_ITERATION = curr + 1
+  for _ in range(i):
     total_wait_time, k = func(*args) # Executa simulação
     avg_wait_time = total_wait_time / k
     avg_wait_times.append(avg_wait_time)
   
   return avg_wait_times
 
+# Observamos uma execução de simulação. Calculamos a área sob a curva
+# da evolução do número de clientes no sistema (N) em função do tempo.
+# Para isso, é tirada uma "foto" do sistema a cada iteração, contendo
+# uma lista de tuplas no formato (tempo, N)
+def area(values):
+  area_values = []
+  area = 0 # Área acumulada sob a curva
+  t_prev, N_prev = 0, 0 # Valores anteriores de tempo e N (inicial = 0)
+
+  for t, N in values:
+    area += (t - t_prev) * N_prev # Calcula área do retângulo
+    area_values.append(area)
+    t_prev, N_prev = t, N
+
+  return area_values
+
+def plot_area(func, *args, title='Não Definido', xlabel='Não Definido', ylabel='Não Definido', color='black'):
+  global FONT_SIZE
+  _, _, A = func(*args)
+  area_values = area(A)
+
+  fig, ax = plt.subplots(figsize=(10, 10))
+
+  # Listas de coordenadas x e y para plotagem
+  x = list(range(len(area_values)))
+  y = [0] + area_values
+
+  plt.plot(area_values, linewidth=3, color=color, drawstyle='steps-post')
+  plt.title(title, fontsize=FONT_SIZE*1.1)
+  plt.xlabel(xlabel, fontsize=FONT_SIZE)
+  plt.ylabel(ylabel, fontsize=FONT_SIZE)
+  plt.xticks(fontsize=FONT_SIZE)
+  plt.yticks(fontsize=FONT_SIZE)
+  plt.grid(True)
+  plt.show()
+
+def plot_n_by_time(func, *args, title='Não Definido', xlabel='Não Definido', ylabel='Não Definido', color='black'):
+  global FONT_SIZE
+  _, _, Nt = func(*args)
+  if len(Nt) <= 1:
+    return
+  t, N = zip(*Nt)
+  plt.figure(figsize=(20, 10))
+  plt.plot(N, drawstyle='steps-post', linewidth=3, color=color)
+  plt.title(title, fontsize=FONT_SIZE*1.1)
+  plt.xlabel(xlabel, fontsize=FONT_SIZE)
+  plt.ylabel(ylabel, fontsize=FONT_SIZE)
+  plt.xticks(fontsize=FONT_SIZE)
+  plt.yticks(fontsize=FONT_SIZE)
+  plt.grid(True)
+  plt.show()
+
+def plot_mm1(arrival_rate, service_rate, max_events, max_queue_len=-1, verbose=False):
+  plot_n_by_time(
+    mm1_simulation,
+    arrival_rate, service_rate, max_events, max_queue_len, verbose,
+    title='Evolução do número de clientes no sistema',
+    xlabel='Tempo',
+    ylabel='N(t)',
+    color='green'
+  )
+
+  plot_area(
+    mm1_simulation,
+    arrival_rate, service_rate, max_events, max_queue_len, verbose,
+    title='Área sob a curva da evolução do número de clientes no sistema',
+    xlabel='Tempo',
+    ylabel='Área',
+    color='green'
+  )
+
+def plot_gambler(probability, goal, starting_amount=1, verbose=False):
+  plot_n_by_time(
+    gambler_ruin,
+    probability, goal, starting_amount, verbose,
+    title='Evolução do montante do apostador',
+    xlabel='Rodada',
+    ylabel='Montante',
+    color='purple'
+  )
+
 def main():
-  result = wait_time(10, mm1_simulation, 0.5, 1, 10, -1, True)
-  print(result)
-  # mm1(0.5, 1, 10, -1, 1)
-  # print()
-  # gambler(0.5, 5, 2, 4)
+  # np.random.seed(43)
+  plot_mm1(0.5, 0.5, 100)
+  plot_gambler(0.5, 10)
 
 if __name__ == '__main__':
   main()
