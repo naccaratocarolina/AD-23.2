@@ -20,13 +20,15 @@ def print_message(msg, color, clock, verbose):
 # Evento
 # ================================
 class Event:
-  def __init__(self, type, timestamp, id):
-    self.type = type 
-    self.timestamp = timestamp
+  def __init__(self, type, clock, next_event, id, entry_time=0):
+    self.type = type
+    self.next_event = next_event
+    self.timestamp = clock
+    self.entry_time = entry_time
     self.id = id
 
   def __str__(self):
-    return f'{self.type} {self.id} {self.timestamp:.2f}'
+    return f'{self.type} id={self.id} timestamp={self.timestamp:.2f} next={self.next_event:.2f} entrada={self.entry_time:.2f}'
 
 # ================================
 # M/M/1
@@ -42,73 +44,88 @@ def generate_next_departure(service_rate):
 def print_queue(L):
   print(f'[{", ".join([str(event) for event in L])}]')
 
-def mm1_simulation(arrival_rate, service_rate, max_events, max_queue_len, verbose=True):
+
+def mm1_simulation(arrival_rate, service_rate, max_events=-1, max_queue_len=-1, verbose=True):
   global CURRENT_ITERATION
   CURRENT_ITERATION += 1
   if verbose:
     print_message(f'Iteração #{CURRENT_ITERATION}', BLACK_BG, -1, verbose)
-    print_message(f'Chegada: {arrival_rate} | Partida: {service_rate} | Iterações: {max_events} | Tamanho máximo da fila: {max_queue_len}', BLACK_BG, -1, verbose)
-  L = [] # Lista de eventos (Fila de prioridades)
-  N = 0 # Número de clientes na fila (variavel de estado)
+    max_events_str = max_events if max_events > 0 else 'infinito'
+    max_queue_len_str = max_queue_len if max_queue_len > 0 else 'infinito'
+    print_message(
+      f'Chegada: {arrival_rate} | Partida: {service_rate} | Iterações: {max_events_str} | Tamanho máximo da fila: {max_queue_len_str}',
+      BLACK_BG, -1, verbose)
+
+  L = []  # Lista de eventos (Fila de prioridades)
+  N = 0  # Número de clientes na fila (variável de estado)
   clock = 0
   customer_number = 0
 
   # Métricas
-  total_wait_time = 0 # Tempo acumulado de espera na fila
-  A = [] # Lista de tuplas (tempo, N) para cálculo de área sob a curva
+  total_wait_time = 0  # Tempo acumulado de espera na fila
+  total_service_time = 0  # Tempo acumulado de serviço
+  Nt = []  # Lista de tuplas (tempo, N)
 
-  def schedule_event(type, timestamp):
+  def schedule_event(type, clock, next_event, entry_time=0):
     nonlocal customer_number  # Permite acesso à variável customer_number declarada fora da função
-    event = Event(type, timestamp, customer_number)
-    L.append(event) # Adiciona evento
-    L.sort(key=lambda x: x.timestamp) # Ordena fila por prioridade (timestamp)
+    event = Event(type, clock, next_event, customer_number, entry_time=entry_time)
+    L.append(event)  # Adiciona evento
+    L.sort(key=lambda x: x.timestamp)  # Ordena fila por prioridade (timestamp) após adicionar evento
     customer_number += 1  # Incrementa o número do cliente para o próximo evento
 
-  # Simulação começa com chegada de cliente
-  schedule_event('Arrival', generate_next_arrival(arrival_rate))
+  # Simulação começa com a chegada de cliente
+  next_arrival = generate_next_arrival(arrival_rate)
+  schedule_event('Arrival', 0, next_arrival)
 
-  # Plano de controle (enquanto a fila não estiver vazia e o número máximo de
-  # iterações não for atingido)
+  # Plano de controle - enquanto a fila não estiver vazia e o número máximo de
+  # iterações não for atingido (se max_events = -1, a simulação roda até a fila esvaziar)
   is_busy = True
-  while len(L) > 0 and customer_number < max_events:
-    e = L.pop(0) # Remove evento e da fila (de prioridades) de eventos
-    wait_time = e.timestamp - clock # Calcula tempo de espera
-    clock = e.timestamp # Atualiza relógio
+  while len(L) > 0 and (customer_number < max_events or max_events == -1):
+    e = L.pop(0)  # Remove evento e da fila (de prioridades) de eventos
+    clock += e.next_event  # Atualiza relógio
+    print(e)
 
     # Tira uma "foto" do sistema (para estatísticas)
-    A.append((clock, N))
+    Nt.append((clock, N))
 
     # Sortear tempo da próxima chegada e agendar evento
     # Se N = 1, sortear tempo da próxima partida e agendar partida
     if e.type == 'Arrival':
       if max_queue_len == -1 or N < max_queue_len:
-        schedule_event('Arrival', clock + generate_next_arrival(arrival_rate))
+        next_arrival = generate_next_arrival(arrival_rate)
+        schedule_event('Arrival', clock, next_arrival, e.timestamp)
+        last_arrival = e
         N += 1
         print_message(f'Cliente chega (N = {N})', GREEN, clock, verbose)
         if N == 1:
-          schedule_event('Departure', clock + generate_next_departure(service_rate))
+          next_departure = generate_next_departure(service_rate)
+          schedule_event('Departure', clock, next_departure, e.timestamp)
       else:
         print_message(f'Cliente chega e desiste (N = {N})', RED, clock, verbose)
 
     # Se N > 0, sortear tempo da próxima partida e agendar partida
     if e.type == 'Departure':
       if N > 0:
-        total_wait_time += wait_time # Atualiza métrica
-        # Se servidor estava ocioso, servidor volta a atender
-        if not is_busy:
-          print_message(f'Servidor volta a atender (N = {N})', CYAN, clock, verbose)
+        service_time = clock - e.timestamp  # Tempo de espera na fila
+        # total_wait_time += wait_time  # Atualiza métrica
+        next_departure = generate_next_departure(service_rate)
+        total_service_time += next_departure  # Atualiza métrica
         N -= 1
         is_busy = True
-        schedule_event('Departure', clock + generate_next_departure(service_rate))
-        print_message(f'Cliente sai (N = {N})', YELLOW, clock, verbose)
+        schedule_event('Departure', clock, next_departure, last_arrival.timestamp)
+        print_message(
+          f'Cliente sai (N = {N}) Tempo de serviço = {service_time:.2f}', YELLOW,
+          clock, verbose)
 
     # Se N = 0 e servidor estava ocupado, servidor fica ocioso
     if N == 0 and is_busy:
       print_message(f'Servidor fica ocioso (N = {N})', BLUE, clock, verbose)
       is_busy = False
 
-  return (total_wait_time, customer_number, A) # Retorna métricas
- 
+  print(total_wait_time)
+  print(total_service_time)
+  return (total_wait_time, customer_number, Nt)  # Retorna métricas
+
 # ================================
 # Ruína do Apostador
 # ================================
@@ -146,14 +163,6 @@ def gambler_ruin(probability, goal, starting_amount, verbose=True):
   
   return round, 0, M # Retorna número de rodadas
 
-def gambler(win_probability, goal, starting_amount, i=2):
-  counter = 0
-  while counter < i:
-    print(f'{PURPLE}Simulação #{counter+1}{END}')
-    gambler_ruin(win_probability, goal, starting_amount)
-    print()
-    counter += 1
-
 # ================================
 # Estatísticas
 # ================================
@@ -165,8 +174,6 @@ FONT_SIZE = 18
 # Número médio de clientes no sistema (N) = Média do número de clientes no sistema (fila + servidor)
 # Número médio de clientes na fila (Nq) = Média do número de clientes na fila
 # Utilização do servidor (U) = Fração de tempo que o servidor está ocupado
-
-
 
 # O sistema é simulado por i iterações. Cada iteração possui K clientes.
 # Seja W_i_k o tempo de espera do k-ésimo cliente na i-ésima iteração,
@@ -262,8 +269,9 @@ def plot_gambler(probability, goal, starting_amount=1, verbose=False):
 
 def main():
   # np.random.seed(43)
-  plot_mm1(0.5, 0.5, 100)
-  plot_gambler(0.5, 10)
+  # plot_mm1(0.5, 0.5, 100)
+  # plot_gambler(0.5, 10)
+  mm1_simulation(0.5, 0.5, max_events=10)
 
 if __name__ == '__main__':
   main()
