@@ -39,7 +39,7 @@ def run_epidemy(N, infection_rate, recovery_rate):
 
   # Inicio da simulacao
   it = 0
-  while it < 50:
+  while n_gens < N:
     it += 1
 
     # Evento de infecção
@@ -129,7 +129,7 @@ def run_epidemy(N, infection_rate, recovery_rate):
 
     # Se o numero de individuos no sistema for zero e a geração anterior não tiver
     # nenhum individuo, então a epidemia acabou
-    if n == 0 and generations[n_gens - 1] == []:
+    if n == 0 and generations[n_gens - 1] == [0]:
       print('Extinção')
       break
 
@@ -141,8 +141,8 @@ def run_epidemy(N, infection_rate, recovery_rate):
 
 def main():
   N = 2
-  infection_rate = 1
-  recovery_rate = 2
+  infection_rate = 2
+  recovery_rate = 1
   result = run_epidemy(N, infection_rate, recovery_rate)
   print('Gerações: ', result["generations"])
   print('Filhos: ', result["children"])
