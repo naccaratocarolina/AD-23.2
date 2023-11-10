@@ -25,7 +25,6 @@ def run_epidemy(N, infection_rate, recovery_rate):
 
   generations = {} # Dicionário de gerações: {geração: [tempos de infecção (chegada) de cada indivíduo da mesma geração]}
   n_gens = 0 # Contador de gerações
-  tot_sis_time = 0  # Tempo total no sistema
 
   # Gera o tempo da primeira infecção
   rand = random.random()
@@ -40,7 +39,9 @@ def run_epidemy(N, infection_rate, recovery_rate):
   # O critério de parada é quando o tempo de recuperação gerado for maior que
   # o tempo de chegada (infecção) gerado. Todos os indivíduos que foram gerados por
   # essa função correspondem a uma geração.
+  it = 0
   while n_gens < N:
+    it += 1
     # Evento de infecção
     if t_next_infection < t_next_recovery:
       # Atualiza relogio e contadores
@@ -84,8 +85,8 @@ def run_epidemy(N, infection_rate, recovery_rate):
         # Filhos do individuo que está em recuperação. Cada elemento da lista é
         # o clock na chegada de um novo individuo
         offspring = []
-        t_child_next_infection = 0
-        t_child_next_recovery = 0
+        t_child_next_infection = t_next_infection
+        t_child_next_recovery = t_next_recovery
         t_child_lambda = 0
         t_child_mu = 0
 
@@ -121,7 +122,7 @@ def run_epidemy(N, infection_rate, recovery_rate):
         # chegada da nova infecção, a geração atual é finalizada e o processo de
         # geração de novas infecções é reiniciado. Enquanto isso não acontece,
         # novas infecções são geradas e atendidas imediatamente
-        if t_next_recovery < t_child_next_infection:
+        if t_next_recovery < t_child_next_infection or num_children == 0:
           # Adiciona a geração atual no dicionário de gerações
           generations[n_gens] = offspring
           n_gens += 1
@@ -129,7 +130,13 @@ def run_epidemy(N, infection_rate, recovery_rate):
           t_next_infection = t_child_next_infection
           t_next_recovery = t_child_next_recovery
           break
-  
+
+    # Se o numero de individuos no sistema for zero e a geração anterior não tiver
+    # nenhum individuo, então a epidemia acabou
+    if n == 0 and generations[n_gens - 1] == []:
+      print('Extinção')
+      break
+
   return {
     "clock": clock, # Tempo final de simulacao
     "generations": generations, # Dicionario de geracoes
@@ -137,10 +144,10 @@ def run_epidemy(N, infection_rate, recovery_rate):
 
 def main():
   N = 4
-  infection_rate = 0.5
-  recovery_rate = 1
+  infection_rate = 1
+  recovery_rate = 0.5
   result = run_epidemy(N, infection_rate, recovery_rate)
-  print(result["generations"])
+  print('Gerações: ', result["generations"])
 
 if __name__ == "__main__":
   main()
