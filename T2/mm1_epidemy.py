@@ -39,9 +39,7 @@ def run_epidemy(N, infection_rate, recovery_rate):
 
   # Inicio da simulacao
   it = 0
-  # while it < 10:
-  while n_gens < N:
-  # while True:
+  while it < 50:
     it += 1
 
     # Evento de infecção
@@ -87,30 +85,31 @@ def run_epidemy(N, infection_rate, recovery_rate):
       # infecções, que serão os seus filhos e farão parte da mesma geração.
       # Quando o tempo de recuperação do individuo atual for maior que o
       # acumulado dos tempos de chegadas da nova infecção, a geração de
-      # filhos deste individuos encerra
+      # filhos deste individuos encerra. É possível que o individuo em
+      # recuperação gere 0 ou mais filhos
       elapsed_time = 0
       n_children = 0
-      while elapsed_time < t_mu:
-        n_children += 1
-
-        # Atualiza relogio e contadores
-        n += 1
-        n_infected += 1
-
-        # Gera uma infecção/filho
+      while True:
         rand = random.random()
         t_lambda = -math.log(rand) / infection_rate
+        elapsed_time += t_lambda
+
+        if elapsed_time > t_mu:
+          break
+
+        # Atualiza contadores
+        n_children += 1
+        n += 1
+        n_infected += 1
         t_next_infection = clock + t_lambda
         tot_lambda += t_lambda
+        n_offspring += 1
 
         if n_gens not in generations:
           generations[n_gens] = []
         generations[n_gens].append(t_next_infection)
-
-        n_offspring += 1
-        elapsed_time += t_lambda
       
-      # Se o indiduo atual não gerou nenhum filho, adiciona 0 ao dicionario
+      # Adiciona numero de filhos gerados
       if n_gens not in children:
         children[n_gens] = []
       children[n_gens].append(n_children)
@@ -136,17 +135,18 @@ def run_epidemy(N, infection_rate, recovery_rate):
 
   return {
     "clock": clock, # Tempo final de simulacao
-    "generations": generations, # Dicionario de geracoes,
+    "generations": generations, # Dicionario de geracoes
     "children": children, # Dicionario de filhos por geracao
   }
 
 def main():
   N = 2
   infection_rate = 1
-  recovery_rate = 20
+  recovery_rate = 2
   result = run_epidemy(N, infection_rate, recovery_rate)
   print('Gerações: ', result["generations"])
   print('Filhos: ', result["children"])
+  print('Número de gerações: ', len(result["generations"]))
   print('Tempo final de simulação:', result["clock"])
 
 if __name__ == "__main__":
