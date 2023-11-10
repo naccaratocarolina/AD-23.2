@@ -41,6 +41,7 @@ def run_epidemy(N, infection_rate, recovery_rate):
   # essa função correspondem a uma geração.
   it = 0
   while n_gens < N:
+  # while it < N:
     it += 1
     # Evento de infecção
     if t_next_infection < t_next_recovery:
@@ -81,54 +82,58 @@ def run_epidemy(N, infection_rate, recovery_rate):
       # maior que o tempo de chegada da nova infecção, a geração atual é
       # finalizada (ou seja, todos os individuos gerados, já foram atendidos/
       # recuperados) e o processo de geração de novas infecções é reiniciado
+      offspring = []
+      t_child_next_infection = 0
+      t_child_next_recovery = 0
+      t_child_lambda = 0
+      t_child_mu = 0
+      tot_children_lambda = 0
+      tot_children_mu = 0
       while True:
         # Filhos do individuo que está em recuperação. Cada elemento da lista é
         # o clock na chegada de um novo individuo
-        offspring = []
-        t_child_next_infection = t_next_infection
-        t_child_next_recovery = t_next_recovery
-        t_child_lambda = 0
-        t_child_mu = 0
+        elapsed_time = 0
 
-        # Gera um numero aleatorio de filhos de acordo com a distribuição Poisson
-        num_children = np.random.poisson(infection_rate)
-        for _ in range(num_children):
-          # Gera uma nova infecção/chegada
-          rand = random.random()
-          t_child_lambda = -math.log(rand) / infection_rate
-          t_child_next_infection = clock + t_child_lambda
-          tot_lambda += t_child_lambda
+        # Gera uma nova infecção/chegada
+        rand = random.random()
+        t_child_lambda = -math.log(rand) / infection_rate
+        t_child_next_infection = clock + t_child_lambda
+        tot_children_lambda += t_child_lambda
+        elapsed_time += t_child_lambda
 
-          # Atualiza relogio e contadores
-          clock = t_child_next_infection
-          n += 1
-          n_infected += 1
+        # Atualiza relogio e contadores
+        clock = t_child_next_infection
+        n += 1
+        n_infected += 1
 
-          # Adiciona o tempo de chegada do novo individuo na lista de filhos
-          offspring.append(clock)
+        # Adiciona o tempo de chegada do novo individuo na lista de filhos
+        offspring.append(clock)
 
-          # Gera tempo de recuperação
-          rand = random.random()
-          t_child_mu = -math.log(rand) / recovery_rate
-          t_child_next_recovery = clock + t_child_mu
-          tot_mu += t_child_mu
+        # Gera tempo de recuperação
+        rand = random.random()
+        t_child_mu = -math.log(rand) / recovery_rate
+        t_child_next_recovery = clock + t_child_mu
+        tot_children_mu += t_child_mu
             
-          # Atualiza relogio e contadores
-          clock = t_child_next_recovery
-          n -= 1
-          n_recovered += 1
+        # Atualiza relogio e contadores
+        clock = t_child_next_recovery
+        n -= 1
+        n_recovered += 1
 
-        # Se o tempo de recuperação do individuo atual for maior que o tempo de
-        # chegada da nova infecção, a geração atual é finalizada e o processo de
-        # geração de novas infecções é reiniciado. Enquanto isso não acontece,
-        # novas infecções são geradas e atendidas imediatamente
-        if t_next_recovery < t_child_next_infection or num_children == 0:
+        
+        # Se o somatorio das chegadas dos filhos for maior que o tempo de
+        # recuperação do individuo atual, então a geração atual é finalizada
+        # e o processo de geração de novas infecções é reiniciado Enquanto isso
+        # não acontece, novas infecções são geradas e atendidas imediatamente
+        if elapsed_time < t_mu:
           # Adiciona a geração atual no dicionário de gerações
           generations[n_gens] = offspring
           n_gens += 1
           # Atualiza tempos de infecção e recuperação
-          t_next_infection = t_child_next_infection
-          t_next_recovery = t_child_next_recovery
+          t_next_infection += (tot_children_lambda + tot_children_mu)
+          t_next_recovery += (tot_children_lambda + tot_children_mu)
+          tot_lambda += tot_children_lambda
+          tot_mu += tot_children_mu
           break
 
     # Se o numero de individuos no sistema for zero e a geração anterior não tiver
