@@ -189,6 +189,39 @@ class mm1_epidemy:
     for i in range(self.num_sims):
       out['sims'].append(self.run_one_mm1_epid())
 
+    terminam = 0
+    duracao_periodo_ocupado = 0
+    media_freq_nascimentos = []
+    grau_saida_raiz = 0
+    grau_saida_maximo = 0
+    altura_arvore = 0
+    for sim in out['sims']:
+      if sim['extinta']:
+        # periodos ocupados que terminam
+        terminam += 1
+        # duração do periodo ocupado
+        duracao_periodo_ocupado += sim['num_iteracoes']
+        # frequencia de nascimentos
+        media_freq_nascimentos.append(sim['freq_nascimentos'])
+        # grau de saida da raiz
+        grau_saida_raiz += sim['qtd_filhos_arr'][0]
+        # grau de saida maximo
+        grau_saida_maximo += max(sim['qtd_filhos_arr'])
+        # altura da arvore
+        altura_arvore += sim['num_geracoes']
+    # fraçao de periodos ocupados que terminam
+    sim['frac_periodos_terminam'] = terminam / self.num_sims
+    # media do tempo que a epidemia dura
+    sim['media_duracao_epidemia'] = duracao_periodo_ocupado / terminam
+    # media da frequencia de nascimentos
+    sim['media_freq_nascimentos'] =  np.array([sum(y) for y in zip(*media_freq_nascimentos)]).mean()
+    # media do grau de saida da raiz
+    sim['media_grau_saida_raiz'] = grau_saida_raiz / terminam
+    # media do grau de saida maximo
+    sim['media_grau_saida_maximo'] = grau_saida_maximo / terminam
+    # media da altura da arvore
+    sim['media_altura_arvore'] = altura_arvore / terminam
+
     # escreve JSON de saida
     with open(self.out_file, 'w') as f:
       f.write(
