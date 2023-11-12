@@ -1,153 +1,202 @@
 import numpy as np
+import datetime
 import random
 
-# debug var
-debug = False
+class mm1_epidemy:
+  t_chegada = 0
+  t_saida = 0
 
-# max iteracoes
-max_iter = 100000
-
-# random seed
-random.seed(10)
-
-# taxas
-tx_chegada = 1.5
-tx_saida = 0.2
-
-t_chegada = 0
-t_saida = 0
-
-# funcoes geradoras de tempo
-def gera_chegada(t_chegada):
-  return t_chegada + np.random.exponential(1/tx_chegada)
-
-def gera_saida(t_saida):
-  return t_saida + np.random.exponential(1/tx_saida)
-
-def next_event():
-  if t_saida < t_chegada:
-    return 'saida'
-  else:
-    return 'chegada'
-
-def criterio_parada(tam_ger_arr, excesso=0.002):
-  # caso a geracao esteja crescendo numa taxa muito alta, paramos
-  # para saber se esta crescendo, usamos as ultimas 3 geracoes
-  # e comparamos a taxa de crescimento com a taxa de chegadas
-  excesso = 1 + excesso
-  media = tx_chegada / tx_saida
+  # inicializacao da classe
+  def __init__(
+    self,
+    num_sims=20,
+    tx_chegada=1,
+    tx_saida=1,
+    max_iter=100000,
+    excesso=0.02,
+    debug=False,
+    name=None
+  ):
+    self.num_sims = num_sims
+    self.tx_chegada = tx_chegada
+    self.tx_saida = tx_saida
+    self.max_iter = max_iter
+    self.excesso = excesso
+    self.debug = debug
+    # random seed
+    random.seed(10)
+    # nome do arquivo de saida a partir do horario de execucao
+    horario = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    self.out_file = (
+      'mm1_epidemy.' +
+      (name if name else '') +
+      '.' + horario + '.json'
+    )
   
-  if len(tam_ger_arr) < 4:
-    return False
-  else:
-    ult = tam_ger_arr[-1]
-    penult = tam_ger_arr[-2]
-    antpenult = tam_ger_arr[-3]
+  # funcoes geradoras de tempo
+  def gera_chegada(self):
+    self.t_chegada += np.random.exponential(1/self.tx_chegada)
 
-    if (
-      ult > penult*media*excesso and
-      penult > antpenult*media*excesso
-    ):
-      return True
+  def gera_saida(self):
+    self.t_saida += np.random.exponential(1/self.tx_saida)
 
-    return False
+  # funcao que decide qual evento acontece primeiro
+  def next_event(self):
+    if self.t_saida < self.t_chegada:
+      return 'saida'
+    else:
+      return 'chegada'
 
-# tempos
-t_chegada = gera_chegada(t_chegada)
-t_saida = gera_saida(t_saida)
-
-# primeira geracao
-num_gen = 1
-
-# preciso servir esse 1 cara
-qtd_pais_para_atender = 1
-
-qtd_filhos = 0
-qtd_filhos_ant = 1
-
-# o proprio cara
-tam_gen = 0
-tam_gen_ant = None
-
-tam_gen_arr = [1]
-qtd_filhos_arr = []
-
-pais_atendidos = 0
-
-it = 0
-
-extinta = False
-
-while it < max_iter and not criterio_parada(tam_gen_arr):
-  if debug:
-    print('====================================================')
-    print(next_event())
-    print('iteracao:', it)
-    print('estou na geracao', num_gen)
-    print('qtd. de pessoas na geracao atual', tam_gen)
-    print('qtd. de pessoas na geracao anterior', tam_gen_ant)
-    print('----------------------------------------------------')
-
-  if next_event() == 'saida':
-
-    # muda de pai
-    qtd_filhos_arr.append(qtd_filhos)
-    qtd_filhos_ant = qtd_filhos
-    tam_gen += qtd_filhos
-    qtd_filhos = 0
-
-    # atendi mais um pai
-    pais_atendidos += 1
-
-    if debug:
-      print('saiu um pai, agora tenho', pais_atendidos, 'pais atendidos')
-      print('o pai que sai tem', qtd_filhos_ant, 'filhos')
-
-    # troca de geracao depois de atender todos os pais
-    if pais_atendidos == tam_gen_ant or tam_gen_ant == None:
-      if debug:
-        print('!! trocou de geracao !!')
-      tam_gen_arr.append(tam_gen)
-      tam_gen_ant = tam_gen
-      pais_atendidos = 0
-      tam_gen = 0
-      qtd_filhos = 0
-      num_gen += 1
-
-    if (pais_atendidos == tam_gen_ant) and tam_gen == 0:
-      if debug:
-        print('!! extinçao !!')
-      extinta = True
-      break
+  def criterio_parada(self, tam_ger_arr):
+    # caso a geracao esteja crescendo numa taxa muito alta, paramos
+    # para saber se esta crescendo, usamos as ultimas 3 geracoes
+    # e comparamos a taxa de crescimento com a taxa de chegadas
+    excesso = 1 + self.excesso
+    media = self.tx_chegada / self.tx_saida
     
-    # gera proxima saida
-    t_saida = gera_saida(t_saida)
+    if len(tam_ger_arr) < 4:
+      return False
+    else:
+      ult = tam_ger_arr[-1]
+      penult = tam_ger_arr[-2]
+      antpenult = tam_ger_arr[-3]
 
-  if next_event() == 'chegada':
-    qtd_filhos += 1
-    if debug:
-      print('chegou um filho, agora tenho', qtd_filhos, 'filhos')
+      if (
+        ult > penult*media*excesso and
+        penult > antpenult*media*excesso
+      ):
+        return True
 
-    # gera proxima chegada
-    t_chegada = gera_chegada(t_chegada)
+      return False
 
-  it += 1
-  if debug:
-    print('====================================================')
+  def run_one_mm1_epid(self):
+    # tempos
+    self.gera_chegada()
+    self.gera_saida()
 
-arr_aux = np.array(qtd_filhos_arr)
-freq = [0] * int(arr_aux.max() + 1)
-for i in range(len(freq)):
-  freq[i] = (arr_aux == i).sum()
+    # primeira geracao
+    num_gen = 1
 
-dist = freq / sum(freq)
+    qtd_filhos = 0
+    qtd_filhos_ant = 1
 
-print('Tamanho da geracao:', tam_gen_arr)
-print('Quantidade de filhos:', qtd_filhos_arr)
-print('Numero de geracoes:', num_gen)
-print('Numero de iteracoes:', it)
-print('Freq. de nascimentos:', freq)
-print('Distri. de nascimentos:', dist)
+    # o proprio cara
+    tam_gen = 0
+    tam_gen_ant = None
+
+    tam_gen_arr = [1]
+    qtd_filhos_arr = []
+
+    pais_atendidos = 0
+
+    it = 0
+
+    extinta = False
+
+    while it < self.max_iter and not self.criterio_parada(tam_gen_arr):
+      if self.debug:
+        print('====================================================')
+        print(self.next_event())
+        print('iteracao:', it)
+        print('estou na geracao', num_gen)
+        print('qtd. de pessoas na geracao atual', tam_gen)
+        print('qtd. de pessoas na geracao anterior', tam_gen_ant)
+        print('----------------------------------------------------')
+
+      if self.next_event() == 'saida':
+
+        # muda de pai
+        qtd_filhos_arr.append(qtd_filhos)
+        qtd_filhos_ant = qtd_filhos
+        tam_gen += qtd_filhos
+        qtd_filhos = 0
+
+        # atendi mais um pai
+        pais_atendidos += 1
+
+        if self.debug:
+          print('saiu um pai, agora tenho', pais_atendidos, 'pais atendidos')
+          print('o pai que sai tem', qtd_filhos_ant, 'filhos')
+
+        # troca de geracao depois de atender todos os pais
+        if pais_atendidos == tam_gen_ant or tam_gen_ant == None:
+          if self.debug:
+            print('!! trocou de geracao !!')
+          tam_gen_arr.append(tam_gen)
+          tam_gen_ant = tam_gen
+          pais_atendidos = 0
+          tam_gen = 0
+          qtd_filhos = 0
+          num_gen += 1
+
+        if (pais_atendidos == tam_gen_ant) and tam_gen == 0:
+          if self.debug:
+            print('!! extinçao !!')
+          extinta = True
+          break
+
+        # gera proxima saida
+        self.gera_saida()
+
+      if self.next_event() == 'chegada':
+        qtd_filhos += 1
+        if self.debug:
+          print('chegou um filho, agora tenho', qtd_filhos, 'filhos')
+
+        # gera proxima chegada
+        self.gera_chegada()
+
+      it += 1
+      if self.debug:
+        print('====================================================')
+
+    arr_aux = np.array(qtd_filhos_arr)
+    freq = [0] * int(arr_aux.max() + 1)
+    for i in range(len(freq)):
+      freq[i] = (arr_aux == i).sum()
+
+    dist = freq / sum(freq)
+
+    print('Extinta?', extinta)
+    print('Numero de geracoes:', num_gen)
+    print('Numero de iteracoes:', it)
+    print('Distri. de nascimentos:', dist)
+
+    # cria JSON de saida
+    return {
+      'extinta': extinta,
+      'tam_ger_arr': tam_gen_arr,
+      'qtd_filhos_arr': qtd_filhos_arr,
+      'num_geracoes': num_gen,
+      'num_iteracoes': it,
+      'freq_nascimentos': freq,
+      'dist_nascimentos': dist.tolist(),
+    }
+
+
+  def run_mm1_epid(self):
+    # rodando N simulações
+    out = {
+      'num_sims': self.num_sims,
+      'tx_chegada': self.tx_chegada,
+      'tx_saida': self.tx_saida,
+      'max_iter': self.max_iter,
+      'excesso': self.excesso,
+      'debug': self.debug,
+      'name': self.out_file,
+      'sims': []
+    }
+    for i in range(self.num_sims):
+      out['sims'].append(self.run_one_mm1_epid())
+
+    # escreve JSON de saida
+    with open(self.out_file, 'w') as f:
+      f.write(
+        str(out)
+        .replace('\'', '\"')
+        .replace('False', 'false')
+        .replace('True', 'true')
+      )
 
 # TODO: encapsular para rodar N simulaçõe
 
@@ -177,4 +226,11 @@ print('Distri. de nascimentos:', dist)
     ### media do numero de clientes por periodo ocupado
 # 8) media entre o tamanho das "subarvores" geradas entre as extinções
 
-
+# criando a simulação
+epidemia = mm1_epidemy(
+  tx_chegada=2,
+  tx_saida=1,
+  name='caso1'
+)
+# rodando a simulação
+epidemia.run_mm1_epid()
