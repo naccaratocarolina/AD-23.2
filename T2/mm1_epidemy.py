@@ -12,8 +12,7 @@ class mm1_epidemy:
     num_sims=20,
     tx_chegada=1,
     tx_saida=1,
-    max_iter=100000,
-    excesso=0.02,
+    max_iter=1000000,
     debug=False,
     name=None
   ):
@@ -21,10 +20,11 @@ class mm1_epidemy:
     self.tx_chegada = tx_chegada
     self.tx_saida = tx_saida
     self.max_iter = max_iter
-    self.excesso = excesso
     self.debug = debug
+
     # random seed
     random.seed(10)
+
     # nome do arquivo de saida a partir do horario de execucao
     horario = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     self.out_file = (
@@ -46,28 +46,6 @@ class mm1_epidemy:
       return 'saida'
     else:
       return 'chegada'
-
-  def criterio_parada(self, tam_ger_arr):
-    # caso a geracao esteja crescendo numa taxa muito alta, paramos
-    # para saber se esta crescendo, usamos as ultimas 3 geracoes
-    # e comparamos a taxa de crescimento com a taxa de chegadas
-    excesso = 1 + self.excesso
-    media = self.tx_chegada / self.tx_saida
-    
-    if len(tam_ger_arr) < 4:
-      return False
-    else:
-      ult = tam_ger_arr[-1]
-      penult = tam_ger_arr[-2]
-      antpenult = tam_ger_arr[-3]
-
-      if (
-        ult > penult*media*excesso and
-        penult > antpenult*media*excesso
-      ):
-        return True
-
-      return False
 
   def run_one_mm1_epid(self):
     # tempos
@@ -93,7 +71,7 @@ class mm1_epidemy:
 
     extinta = False
 
-    while it < self.max_iter and not self.criterio_parada(tam_gen_arr):
+    while it < self.max_iter:
       if self.debug:
         print('====================================================')
         print(self.next_event())
@@ -161,6 +139,7 @@ class mm1_epidemy:
     print('Numero de geracoes:', num_gen)
     print('Numero de iteracoes:', it)
     print('Distri. de nascimentos:', dist)
+    print('\n')
 
     # cria JSON de saida
     return {
@@ -173,7 +152,6 @@ class mm1_epidemy:
       'dist_nascimentos': dist.tolist(),
     }
 
-
   def run_mm1_epid(self):
     # rodando N simulações
     out = {
@@ -181,49 +159,86 @@ class mm1_epidemy:
       'tx_chegada': self.tx_chegada,
       'tx_saida': self.tx_saida,
       'max_iter': self.max_iter,
-      'excesso': self.excesso,
       'debug': self.debug,
       'name': self.out_file,
       'sims': []
     }
+
     for i in range(self.num_sims):
       out['sims'].append(self.run_one_mm1_epid())
 
     terminam = 0
     duracao_periodo_ocupado = 0
+    duracao_periodo_ocupado_global = 0
     media_freq_nascimentos = []
     grau_saida_raiz = 0
     grau_saida_maximo = 0
     altura_arvore = 0
+    qnt_filhos_global = []
+
+    # calcula algumas metricas
     for sim in out['sims']:
       if sim['extinta']:
         # periodos ocupados que terminam
         terminam += 1
+
         # duração do periodo ocupado
         duracao_periodo_ocupado += sim['num_iteracoes']
-        # frequencia de nascimentos
-        media_freq_nascimentos.append(sim['freq_nascimentos'])
-        # grau de saida da raiz
-        grau_saida_raiz += sim['qtd_filhos_arr'][0]
-        # grau de saida maximo
-        grau_saida_maximo += max(sim['qtd_filhos_arr'])
-        # altura da arvore
-        altura_arvore += sim['num_geracoes']
+      
+      # duração do periodo ocupado global
+      duracao_periodo_ocupado_global += sim['num_iteracoes']
+
+      # frequencia de nascimentos
+      media_freq_nascimentos.append(sim['freq_nascimentos'])
+
+      # grau de saida da raiz
+      grau_saida_raiz += sim['qtd_filhos_arr'][0]
+
+      # grau de saida maximo
+      grau_saida_maximo += max(sim['qtd_filhos_arr'])
+
+      # altura da arvore
+      altura_arvore += sim['num_geracoes']
+
+      # vetor que retorna a combinacao de todos os filhos de todos os pais de todas as simulacoes
+      qnt_filhos_global.append(sim['qtd_filhos_arr'])
+
     # fraçao de periodos ocupados que terminam
     sim['frac_periodos_terminam'] = terminam / self.num_sims
-    # media do tempo que a epidemia dura
+
+    # media do tempo que a epidemia dura (apenas simulacoes que terminam)
     sim['media_duracao_epidemia'] = duracao_periodo_ocupado / terminam
+
+    # media do tempo global que a epidemia dura (incluindo simulacoes que terminam e nao terminam)
+    sim['media_duracao_epidemia_global'] = duracao_periodo_ocupado_global / self.num_sims
+    
     # media da frequencia de nascimentos
     sim['media_freq_nascimentos'] =  np.array([sum(y) for y in zip(*media_freq_nascimentos)]).mean()
+
     # media do grau de saida da raiz
     sim['media_grau_saida_raiz'] = grau_saida_raiz / terminam
+
     # media do grau de saida maximo
     sim['media_grau_saida_maximo'] = grau_saida_maximo / terminam
+
     # media da altura da arvore
     sim['media_altura_arvore'] = altura_arvore / terminam
+    
+    # lista de filhos global
+    qnt_filhos_global_ordenado = np.sort(np.concatenate(qnt_filhos_global))
+    valores_unicos, frequencias = np.unique(qnt_filhos_global_ordenado, return_counts=True)
+    probabilidades = []
+    
+    for i in frequencias:
+      probabilidades.append(i / sum(frequencias))
+    
+    cdf_cum = np.cumsum(probabilidades)
+    
+    sim['cdf_valores_eixo_x'] = valores_unicos.tolist()
+    sim['cdf_acumulada_eixo_y'] = cdf_cum.tolist()
 
     # escreve JSON de saida
-    with open(self.out_file, 'w') as f:
+    with open('dados/'+self.out_file, 'w') as f:
       f.write(
         str(out)
         .replace('\'', '\"')
