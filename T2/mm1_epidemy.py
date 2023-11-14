@@ -22,8 +22,8 @@ class mm1_epidemy:
     self.max_iter = max_iter
     self.debug = debug
 
-    # random seed
-    random.seed(10)
+    # semenado para manter consistencia entre as simulacoes
+    random.seed(43)
 
     # nome do arquivo de saida a partir do horario de execucao
     horario = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -235,7 +235,7 @@ class mm1_epidemy:
     cdf_cum = np.cumsum(probabilidades)
     
     sim['cdf_valores_eixo_x'] = valores_unicos.tolist()
-    sim['cdf_acumulada_eixo_y'] = cdf_cum.tolist()
+    sim['cdf_eixo_y'] = cdf_cum.tolist()
 
     # escreve JSON de saida
     with open('dados/'+self.out_file, 'w') as f:
@@ -273,12 +273,3 @@ class mm1_epidemy:
 #    a ultima geração for extinta
     ### media do numero de clientes por periodo ocupado
 # 8) media entre o tamanho das "subarvores" geradas entre as extinções
-
-# criando a simulação
-epidemia = mm1_epidemy(
-  tx_chegada=2,
-  tx_saida=1,
-  name='caso1'
-)
-# rodando a simulação
-epidemia.run_mm1_epid()
