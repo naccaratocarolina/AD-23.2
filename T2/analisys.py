@@ -35,12 +35,12 @@ epidemia_caso4 = mm1_epidemy(
 )
 
 # Roda as simulacoes
-epidemia_caso1.run_mm1_epid()
-epidemia_caso2.run_mm1_epid()
-epidemia_caso3.run_mm1_epid()
-epidemia_caso4.run_mm1_epid()
+# epidemia_caso1.run_mm1_epid()
+# epidemia_caso2.run_mm1_epid()
+# epidemia_caso3.run_mm1_epid()
+# epidemia_caso4.run_mm1_epid()
 
-def plot_cdf(dados_sim, arquivo):
+def plot_cdf(tx_chegada, tx_saida, dados_sim, arquivo):
   # Extrai caso do nome do arquivo
   caso = arquivo.split('.')[1]
 
@@ -50,7 +50,7 @@ def plot_cdf(dados_sim, arquivo):
 
   # Gera grafico da CDF
   plt.figure(figsize=(8, 6))
-  plt.title(f'Distribuição de filhos {caso}')
+  plt.title(f'Distribuição de filhos {caso}: λ={tx_chegada}, μ={tx_saida}')
 
   # Interpolação linear
   f = interp1d(cdf_valores_eixo_x, cdf_eixo_y, kind='linear')
@@ -70,9 +70,11 @@ for arquivo in glob.glob("dados/*.json"):
   # Abre o arquivo JSON
   with open(arquivo) as f:
     dados_json = json.load(f)
+    tx_chegada = dados_json['tx_chegada']
+    tx_saida = dados_json['tx_saida']
     dados_sim = dados_json['sims'][-1]
 
-    plot_cdf(dados_sim, os.path.basename(arquivo))
+    plot_cdf(tx_chegada, tx_saida, dados_sim, os.path.basename(arquivo))
 
 # for v in dados_sim:
 #   print(v, dados_sim[v])
