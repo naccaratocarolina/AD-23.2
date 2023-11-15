@@ -35,10 +35,10 @@ epidemia_caso4 = mm1_epidemy(
 )
 
 # Roda as simulacoes
-# epidemia_caso1.run_mm1_epid()
-# epidemia_caso2.run_mm1_epid()
-# epidemia_caso3.run_mm1_epid()
-# epidemia_caso4.run_mm1_epid()
+epidemia_caso1.run_mm1_epid()
+epidemia_caso2.run_mm1_epid()
+epidemia_caso3.run_mm1_epid()
+epidemia_caso4.run_mm1_epid()
 
 def plot_cdf(tx_chegada, tx_saida, dados_sim, arquivo):
   # Extrai caso do nome do arquivo
