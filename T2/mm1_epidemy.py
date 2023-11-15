@@ -67,6 +67,12 @@ class mm1_epidemy:
 
     pais_atendidos = 0
 
+    # qtd. de filhos da 1a geração
+    qnt_filhos_1_gen = 0
+
+    # Acumulado de clientes atendidos na simulação (pais e filhos)
+    acum_clientes = 0
+
     it = 0
 
     extinta = False
@@ -98,6 +104,9 @@ class mm1_epidemy:
 
         # troca de geracao depois de atender todos os pais
         if pais_atendidos == tam_gen_ant or tam_gen_ant == None:
+          acum_clientes += tam_gen
+          if num_gen == 1:
+            qnt_filhos_1_gen = qtd_filhos_ant
           if self.debug:
             print('!! trocou de geracao !!')
           tam_gen_arr.append(tam_gen)
@@ -150,6 +159,9 @@ class mm1_epidemy:
       'num_iteracoes': it,
       'freq_nascimentos': freq,
       'dist_nascimentos': dist.tolist(),
+      'max_qtd_filhos': arr_aux.max(),
+      'qnt_filhos_1_gen': qnt_filhos_1_gen,
+      'acum_clientes': acum_clientes,
     }
 
   def run_mm1_epid(self):
@@ -168,13 +180,30 @@ class mm1_epidemy:
       out['sims'].append(self.run_one_mm1_epid())
 
     terminam = 0
-    duracao_periodo_ocupado = 0
-    duracao_periodo_ocupado_global = 0
-    media_freq_nascimentos = []
-    grau_saida_raiz = 0
-    grau_saida_maximo = 0
-    altura_arvore = 0
+
+    # 1) e 6) Duração do periodo ocupado
+    duracao_periodo_ocupado = []
+    duracao_periodo_ocupado_global = []
+
+    # 2) Qnt. de filhos
     qnt_filhos_global = []
+    qnt_filhos_terminam = []
+
+    # 3) Lista da qnt. de filhos da 1a geração
+    qnt_filhos_1_gen_global = []
+    qnt_filhos_1_gen_terminam = []
+
+    # 4) Lista da qnt. maxima de filhos
+    qnt_max_filhos_global = []
+    qnt_max_filhos_terminam = []
+
+    # 5) Lista da qnt. de geracoes
+    qnt_gen_global = []
+    qnt_gen_terminam = []
+
+    # 7) Lista do acumulado de clientes atendidos
+    acum_clientes_global = []
+    acum_clientes_terminam = []
 
     # calcula algumas metricas
     for sim in out['sims']:
@@ -182,62 +211,112 @@ class mm1_epidemy:
         # periodos ocupados que terminam
         terminam += 1
 
-        # duração do periodo ocupado
-        duracao_periodo_ocupado += sim['num_iteracoes']
-      
-      # duração do periodo ocupado global
-      duracao_periodo_ocupado_global += sim['num_iteracoes']
+        # 1) e 6) Duração do periodo ocupado das simulações que terminam
+        duracao_periodo_ocupado.append(sim['num_iteracoes'])
 
-      # frequencia de nascimentos
-      media_freq_nascimentos.append(sim['freq_nascimentos'])
+        # 2) Qnt. de filhos das simulações que terminam
+        qnt_filhos_terminam.append(sim['qtd_filhos_arr'])
 
-      # grau de saida da raiz
-      grau_saida_raiz += sim['qtd_filhos_arr'][0]
+        # 3) Lista da qnt. de filhos da 1a geração das simulações que terminam
+        qnt_filhos_1_gen_terminam.append(sim['qnt_filhos_1_gen'])
 
-      # grau de saida maximo
-      grau_saida_maximo += max(sim['qtd_filhos_arr'])
+        # 4) Lista da qnt. maxima de filhos das simulações que terminam
+        qnt_max_filhos_terminam.append(sim['max_qtd_filhos'])
 
-      # altura da arvore
-      altura_arvore += sim['num_geracoes']
+        # 5) Lista da qnt. de geracoes das simulações que terminam
+        qnt_gen_terminam.append(sim['num_geracoes'])
 
-      # vetor que retorna a combinacao de todos os filhos de todos os pais de todas as simulacoes
+        # 7) Lista do acumulado de clientes atendidos das simulações que terminam
+        acum_clientes_terminam.append(sim['acum_clientes'])
+
+      # 1) e 6) Duração do periodo ocupado global
+      duracao_periodo_ocupado_global.append(sim['num_iteracoes'])
+
+      # 2) Qnt. de filhos de todas as simulações
       qnt_filhos_global.append(sim['qtd_filhos_arr'])
 
-    # fraçao de periodos ocupados que terminam
-    sim['frac_periodos_terminam'] = terminam / self.num_sims
+      # 3) Lista da qnt. de filhos da 1a geração por simulação
+      qnt_filhos_1_gen_global.append(sim['qnt_filhos_1_gen'])
 
-    # media do tempo que a epidemia dura (apenas simulacoes que terminam)
-    sim['media_duracao_epidemia'] = duracao_periodo_ocupado / terminam
+      # 4) Lista da qnt. maxima de filhos por simulação
+      qnt_max_filhos_global.append(sim['max_qtd_filhos'])
 
-    # media do tempo global que a epidemia dura (incluindo simulacoes que terminam e nao terminam)
-    sim['media_duracao_epidemia_global'] = duracao_periodo_ocupado_global / self.num_sims
-    
-    # media da frequencia de nascimentos
-    sim['media_freq_nascimentos'] =  np.array([sum(y) for y in zip(*media_freq_nascimentos)]).mean()
+      # 5) Lista da qnt. de geracoes por simulação
+      qnt_gen_global.append(sim['num_geracoes'])
 
-    # media do grau de saida da raiz
-    sim['media_grau_saida_raiz'] = grau_saida_raiz / terminam
+      # 7) Lista do acumulado de clientes atendidos por simulação
+      acum_clientes_global.append(sim['acum_clientes'])
 
-    # media do grau de saida maximo
-    sim['media_grau_saida_maximo'] = grau_saida_maximo / terminam
+    # 1) Distribuicao do tempo que a epidemia dura
+    # Epidemias que terminam
+    duracao_terminam_ordernado = np.sort(np.array(duracao_periodo_ocupado))
+    valores_unicos_terminam, frequencias_terminam = np.unique(duracao_terminam_ordernado, return_counts=True)
 
-    # media da altura da arvore
-    sim['media_altura_arvore'] = altura_arvore / terminam
-    
-    # lista de filhos global
+    sim['duracao_terminam'] = valores_unicos_terminam.tolist()
+    sim['freq_duracao_terminam'] = frequencias_terminam.tolist()
+
+    probabilidades_terminam = [i / sum(frequencias_terminam) for i in frequencias_terminam]
+    cdf_cum_terminam = np.cumsum(probabilidades_terminam)
+
+    sim['cdf_duracao_terminam_eixo_x'] = valores_unicos_terminam.tolist()
+    sim['cdf_duracao_terminam_eixo_y'] = cdf_cum_terminam.tolist()
+
+    # Epidemias global
+    duracao_global_ordernado = np.sort(np.array(duracao_periodo_ocupado_global))
+    valores_unicos_global, frequencias_global = np.unique(duracao_global_ordernado, return_counts=True)
+
+    sim['duracao_global'] = valores_unicos_global.tolist()
+    sim['freq_duracao_global'] = frequencias_global.tolist()
+
+    probabilidades_global = [i / sum(frequencias_global) for i in frequencias_global]
+    cdf_cum_global = np.cumsum(probabilidades_global)
+
+    sim['cdf_duracao_global_eixo_x'] = valores_unicos_global.tolist()
+    sim['cdf_duracao_global_eixo_y'] = cdf_cum_global.tolist()
+
+    # 2) Distribuicao da qtd. de filhos
     qnt_filhos_global_ordenado = np.sort(np.concatenate(qnt_filhos_global))
     valores_unicos, frequencias = np.unique(qnt_filhos_global_ordenado, return_counts=True)
-    probabilidades = []
     
-    for i in frequencias:
-      probabilidades.append(i / sum(frequencias))
+    sim['filhos_gerados'] = valores_unicos.tolist()
+    sim['freq_nascimentos'] = frequencias.tolist()
     
+    probabilidades = [i / sum(frequencias) for i in frequencias]
     cdf_cum = np.cumsum(probabilidades)
     
     sim['cdf_valores_eixo_x'] = valores_unicos.tolist()
     sim['cdf_eixo_y'] = cdf_cum.tolist()
 
-    # escreve JSON de saida
+    # Media da frequencia de nascimentos
+    sim['media_freq_nascimentos'] = np.array(frequencias).mean()
+
+    # 3) Media da qnt. de filhos da 1a geracao (grau medio de saida da raiz)
+    sim['grau_medio_saida_raiz_global'] = np.array(qnt_filhos_1_gen_global).mean()
+    sim['grau_medio_saida_raiz_terminam'] = np.array(qnt_filhos_1_gen_terminam).mean()
+
+    # 4) Media entre o maior numero de filhos por simulação (grau de saida maximo)
+    sim['grau_de_saida_maximo_global'] = np.array(qnt_max_filhos_global).mean()
+    sim['grau_de_saida_maximo_terminam'] = np.array(qnt_max_filhos_terminam).mean()
+
+    # 5) Media da qnt de geracoes por simulação
+    sim['altura_media_glbal'] = np.array(qnt_gen_global).mean()
+    sim['altura_media_terminam'] = np.array(qnt_gen_terminam).mean()
+
+    # 6) Media da duração do periodo ocupado
+    sim['media_duracao_epidemia_terminam'] = np.array(duracao_periodo_ocupado).mean()
+    sim['media_duracao_epidemia_global'] = np.array(duracao_periodo_ocupado_global).mean()
+
+    # 7) Media do acumulado de clientes atendidos
+    sim['media_acum_clientes_global'] = np.array(acum_clientes_global).mean()
+    sim['media_acum_clientes_terminam'] = np.array(acum_clientes_terminam).mean()
+
+    # Media das alturas dos nos das arvores ??????
+    # TODO
+
+    # Media entre o tamanho das "subarvores" geradas entre as extinções ??????
+    # TODO
+
+    # Escreve JSON de saida
     with open('dados/'+self.out_file, 'w') as f:
       f.write(
         str(out)
@@ -245,31 +324,3 @@ class mm1_epidemy:
         .replace('False', 'false')
         .replace('True', 'true')
       )
-
-# TODO: encapsular para rodar N simulaçõe
-
-# RESULTADOS:
-    ### fraçao de periodos ocupados que terminam
-    ### tem que remover simulações infitas
-# 1) média de tempo que a epidemia dura entre as N sim.
-    ### distribuição dos graus de saida
-# 2) achar a media do arr de distribuicao e plotar a CDF com ele
-#    pra ficar legal, plotar todas as CDFs de tds. os 4 casos de teste juntas
-#    acumulação das inversas de cada coord. do arr de dist.
-    ### grau medio da saida da raiz
-# 3) média da qtd. de pessoas da 1a geração (filhos da raiz) entre
-#    as N simulações
-    ### media do grau de saida maximo
-# 4) média entre o maior numero de filhos de um pai entre as
-#    N simulações (arr_aux.max())
-    ### altura media da arvore
-# 5) media entre a qtd de gerações entre todas as N simulações
-#    array com todos os len(num_gen) e media desse array
-    ### media das alturas dos nós das arvores
-# 6) TEMOS QUE PENSAR NISSO
-    ### media de duração do periodo ocupado
-# 7) caso finito em que há extinsão, isso não faz muito sentido
-#    no caso infinito, teremos que gerar uma nova chegada quando
-#    a ultima geração for extinta
-    ### media do numero de clientes por periodo ocupado
-# 8) media entre o tamanho das "subarvores" geradas entre as extinções
