@@ -41,23 +41,22 @@ epidemia_caso4 = mm1_epidemy(
 # epidemia_caso3.run_mm1_epid()
 # epidemia_caso4.run_mm1_epid()
 
-def plot_cdf(tx_chegada, tx_saida, eixo_x, eixo_y, title, xlabel, ylabel, arquivo, prefixo, sufixo):
+def plot_cdf(tx_chegada, tx_saida, eixo_x, eixo_y, title, xlabel, ylabel, caso, arquivo):
   if (len(eixo_x) <= 1):
     print(f'Não há dados suficientes para gerar o gráfico de {arquivo}!')
     return
 
-  # Extrai caso do nome do arquivo
-  caso = arquivo.split('.')[1]
-  nome_arquivo = arquivo.replace('dados/', '').replace('.json', '')
-
   # Gera grafico da CDF
   plt.figure(figsize=(8, 6))
-  plt.title(f'{title} {caso}: λ={tx_chegada}, μ={tx_saida}')
+  plt.title(f'{title} (Caso {caso}): λ={tx_chegada}, μ={tx_saida}')
 
   # Interpolação linear
-  f = interp1d(eixo_x, eixo_y, kind='linear')
-  eixo_x_interp = np.linspace(min(eixo_x), max(eixo_x), num=1000, endpoint=True)
+  f = interp1d(eixo_x, eixo_y, kind='linear', fill_value='extrapolate')
+  eixo_x_interp = np.linspace(min(eixo_x), max(eixo_x), num=len(eixo_x), endpoint=True)
   eixo_y_interp = np.array(f(eixo_x_interp))
+
+  # o plot tem que ter len(eixo_x) pontos para que a CDF seja corretamente plotada
+  # por isso, o eixo x interpolado tem que ter len(eixo_x) pontos
 
   plt.plot(eixo_x_interp, eixo_y_interp, label='CDF contínua')
   plt.step(eixo_x, eixo_y, label='CDF discreta', where='post', linestyle='--', color='red', alpha=0.5)
@@ -65,17 +64,14 @@ def plot_cdf(tx_chegada, tx_saida, eixo_x, eixo_y, title, xlabel, ylabel, arquiv
   plt.ylabel(ylabel)
   plt.ticklabel_format(style='plain', axis='x')
   plt.legend()
-  plt.savefig(f'graficos/{prefixo}_{nome_arquivo}_{sufixo}.png')
+  plt.savefig(f'{arquivo}')
   plt.close()
-  print(f'Gráfico {nome_arquivo}.png gerado com sucesso!')
+  print(f'Gráfico {arquivo} gerado com sucesso!')
   # plt.show()
 
 # Estrutura de data:
 # { title1: [value1], title2: [value2], ... }
-def plot_table(data):
-  df = pd.DataFrame(data)
-  casos = ['Caso 1', 'Caso 2', 'Caso 3', 'Caso 4']
-  df.insert(0, 'Caso', casos)
+def plot_table(df, title='Tabela de dados'):
   plt.figure(figsize=(20, 10))
   plt.axis('off')
   table = plt.table(
@@ -92,8 +88,11 @@ def plot_table(data):
     if i == 0 or j == 0:
       # Fonte em negrito
       cell.set_text_props(fontproperties=FontProperties(weight='bold'))
+
+  # set the title
+  plt.title(title, fontsize=20)
   
-  plt.savefig('graficos/tabela.png')
+  plt.savefig('tabela.png')
   plt.close()
   print('Tabela gerada com sucesso!')
 
@@ -101,70 +100,79 @@ def plot_table(data):
 grau_medio_saida_raiz = []
 grau_de_saida_maximo = []
 altura_media = []
-media_duracao_epidemia = []
-media_acum_clientes = []
+altura_media_nos = []
+media_duracao_periodo_ocupado = []
+media_clientes_atendidos = []
+
+# Cabeçalho da tabela
+header = [
+  'Caso',
+  'Grau médio de\nsaída da raiz',
+  'Grau de saída\nmáximo',
+  'Altura média',
+  'Altura média dos nós',
+  'Média da duração\ndas epidemias',
+  'Média do acumulado de\nclientes atendidos',
+]
+
+df = pd.DataFrame(columns=header)
+
+def format_float(value):
+  return f'{value:.2f}'
 
 # Abre todos os arquivos na pasta dados
-arquivos = glob.glob("dados/*.json")
-for i, arquivo in enumerate(glob.glob("dados/*.json")):
+arquivos = glob.glob("*.json")
+for i, arquivo in enumerate(glob.glob("*.json")):
+  caso = arquivo.split('.')[1][-1]
   # Abre o arquivo JSON
   with open(arquivo) as f:
     dados_json = json.load(f)
     tx_chegada = dados_json['tx_chegada']
     tx_saida = dados_json['tx_saida']
-    dados_sim = dados_json['sims'][-1]
+    
+    for type in ['terminam', 'todas']:
+      terminam = 'Epidemias que terminam' if type == 'terminam' else 'Todas as epidemias'
+      dados_sim = dados_json[type]
 
-    # Preenche listas da tabela
-    grau_medio_saida_raiz.append(round(dados_sim['grau_medio_saida_raiz_terminam'], 3))
-    grau_de_saida_maximo.append(round(dados_sim['grau_de_saida_maximo_terminam'], 3))
-    altura_media.append(round(dados_sim['altura_media_terminam'], 3))
-    media_duracao_epidemia.append(round(dados_sim['media_duracao_epidemia_terminam'], 3))
-    media_acum_clientes.append(round(dados_sim['media_acum_clientes_terminam'], 3))
+      # constroi plot da CDF a partir do array de distribuicao de grau de saida
+      # eixo x é um array com os indices do array de distribuicao de grau de saida
+      eixo_x = np.arange(len(dados_sim['dist_grau_saida']), dtype=int)
+      # eixo y é um array com a soma acumulada dos valores do array de distribuicao de grau de saida
+      eixo_y = dados_sim['dist_grau_saida']
+      eixo_y = np.cumsum(eixo_y)
 
-    # CDF distribuicao de tempo (epidemias que terminam)
-    plot_cdf(
-      tx_chegada,
-      tx_saida,
-      dados_sim['cdf_duracao_terminam_eixo_x'],
-      dados_sim['cdf_duracao_terminam_eixo_y'],
-      'Distribuição do tempo de duração das epidemias que terminam',
-      'Duração do periodo ocupado (número de iterações)',
-      'Probabilidade acumulada',
-      arquivo,
-      i,
-      'dist_tempo_terminam',
-    )
+      # CDF distribuicao de tempo (epidemias que terminam)
+      plot_cdf(
+        tx_chegada,
+        tx_saida,
+        eixo_x,
+        eixo_y,
+        f'CDF do período ocupado ({terminam})',
+        'Duração do periodo ocupado (número de iterações)',
+        'Probabilidade acumulada',
+        caso,
+        arquivo.replace('.json', f'.cdf_duracao.{type}.png')
+      )
 
-    # CDF distribuicao de filhos
-    plot_cdf(
-      tx_chegada,
-      tx_saida,
-      dados_sim['cdf_valores_eixo_x'],
-      dados_sim['cdf_eixo_y'],
-      'Distribuição de filhos',
-      'Quantidade de filhos',
-      'Probabilidade acumulada',
-      arquivo,
-      i,
-      'dist_filhos',
-    )
+    # Constuir a tabela de dados
+    dt_terminam = dados_json['terminam']
+    dt_todas = dados_json['todas']
 
-# Tabela de dados
-# Dados da tabela:
-# Media da frequencia de nascimentos
-# Grau medio de saida da raiz
-# Grau de saida maximo
-# Altura media
-# Media da duracao das epidemias que terminam
-# Media do acumulado de clientes atendidos das simulacoes que terminam
-data = {
-  'Grau médio de\nsaída da raiz': grau_medio_saida_raiz,
-  'Grau de saída\nmáximo':  grau_de_saida_maximo,
-  'Altura média': altura_media,
-  'Média da duração\ndas epidemias': media_duracao_epidemia,
-  'Média do acumulado de\nclientes atendidos': media_acum_clientes,
-}
-plot_table(data)
+    # Dados para a tabela
+    linha = [
+      f"Caso {caso} (terminam | todas)",
+      f"{format_float(dt_terminam['grau_medio_saida_raiz'])} | {format_float(dt_todas['grau_medio_saida_raiz'])}",
+      f"{format_float(dt_terminam['grau_de_saida_maximo'])} | {format_float(dt_todas['grau_de_saida_maximo'])}",
+      f"{format_float(dt_terminam['altura_media'])} | {format_float(dt_todas['altura_media'])}",
+      f"{format_float(dt_terminam['altura_media_nos'])} | {format_float(dt_todas['altura_media_nos'])}",
+      f"{format_float(dt_terminam['media_duracao_periodo_ocupado'])} | {format_float(dt_todas['media_duracao_periodo_ocupado'])}",
+      f"{format_float(dt_terminam['media_clientes_atendidos'])} | {format_float(dt_todas['media_clientes_atendidos'])}"
+    ]
+
+    # adiciona linha na df
+    df.loc[i] = linha
+
+  plot_table(df, title=f'Tabela de dados')
 
 # for v in dados_sim:
 #   print(v, dados_sim[v])
