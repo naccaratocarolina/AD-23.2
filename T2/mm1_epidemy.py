@@ -293,5 +293,5 @@ class mm1_epidemy:
     results['todas']['media_clientes_atendidos'] = calc_mean(metrics['todas']['qtd_pais_atendidos'])
 
     # cria e exporta JSON de saida na pasta 'dados'
-    with open(self.out_file, 'w') as outfile:
+    with open('dados/'+self.out_file, 'w') as outfile:
       json.dump(results, outfile, indent=2, ensure_ascii=False)

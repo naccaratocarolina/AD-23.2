@@ -36,12 +36,14 @@ epidemia_caso4 = mm1_epidemy(
 )
 
 # Roda as simulacoes
-# epidemia_caso1.run_mm1_epid()
-# epidemia_caso2.run_mm1_epid()
-# epidemia_caso3.run_mm1_epid()
-# epidemia_caso4.run_mm1_epid()
+epidemia_caso1.run_mm1_epid()
+epidemia_caso2.run_mm1_epid()
+epidemia_caso3.run_mm1_epid()
+epidemia_caso4.run_mm1_epid()
 
 def plot_cdf(tx_chegada, tx_saida, eixo_x, eixo_y, title, xlabel, ylabel, caso, arquivo):
+  nome_arquivo = arquivo.replace('dados/', '').replace('.json', '')
+
   if (len(eixo_x) <= 1):
     print(f'Não há dados suficientes para gerar o gráfico de {arquivo}!')
     return
@@ -64,9 +66,9 @@ def plot_cdf(tx_chegada, tx_saida, eixo_x, eixo_y, title, xlabel, ylabel, caso, 
   plt.ylabel(ylabel)
   plt.ticklabel_format(style='plain', axis='x')
   plt.legend()
-  plt.savefig(f'{arquivo}')
+  plt.savefig(f'graficos/{nome_arquivo}')
   plt.close()
-  print(f'Gráfico {arquivo} gerado com sucesso!')
+  print(f'Gráfico {nome_arquivo} gerado com sucesso!')
   # plt.show()
 
 # Estrutura de data:
@@ -92,7 +94,7 @@ def plot_table(df, title='Tabela de dados'):
   # set the title
   plt.title(title, fontsize=20)
   
-  plt.savefig('tabela.png')
+  plt.savefig('graficos/tabela.png')
   plt.close()
   print('Tabela gerada com sucesso!')
 
@@ -121,8 +123,7 @@ def format_float(value):
   return f'{value:.2f}'
 
 # Abre todos os arquivos na pasta dados
-arquivos = glob.glob("*.json")
-for i, arquivo in enumerate(glob.glob("*.json")):
+for i, arquivo in enumerate(glob.glob("dados/*.json")):
   caso = arquivo.split('.')[1][-1]
   # Abre o arquivo JSON
   with open(arquivo) as f:
