@@ -35,11 +35,11 @@ epidemia_caso4 = mm1_epidemy(
   name='caso4'
 )
 
-# Roda as simulacoes
-epidemia_caso1.run_mm1_epid()
-epidemia_caso2.run_mm1_epid()
-epidemia_caso3.run_mm1_epid()
-epidemia_caso4.run_mm1_epid()
+# # Roda as simulacoes
+# epidemia_caso1.run_mm1_epid()
+# epidemia_caso2.run_mm1_epid()
+# epidemia_caso3.run_mm1_epid()
+# epidemia_caso4.run_mm1_epid()
 
 def plot_cdf(tx_chegada, tx_saida, eixo_x, eixo_y, title, xlabel, ylabel, caso, arquivo):
   nome_arquivo = arquivo.replace('dados/', '').replace('.json', '')
@@ -142,17 +142,17 @@ for i, arquivo in enumerate(glob.glob("dados/*.json")):
       eixo_y = dados_sim['dist_grau_saida']
       eixo_y = np.cumsum(eixo_y)
 
-      # CDF distribuicao de tempo (epidemias que terminam)
+      # CDF distribuicao de filhos
       plot_cdf(
         tx_chegada,
         tx_saida,
         eixo_x,
         eixo_y,
-        f'CDF do período ocupado ({terminam})',
-        'Duração do periodo ocupado (número de iterações)',
+        f'CDF da quantidade de filhos ({terminam})',
+        'Quantidade de filhos',
         'Probabilidade acumulada',
         caso,
-        arquivo.replace('.json', f'.cdf_duracao.{type}.png')
+        arquivo.replace('.json', f'.cdf_filhos.{type}.png')
       )
 
     # Constuir a tabela de dados
