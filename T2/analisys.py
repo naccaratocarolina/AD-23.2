@@ -9,34 +9,38 @@ from matplotlib.font_manager import FontProperties
 
 # Caso 1: 
 epidemia_caso1 = mm1_epidemy(
-  num_sims=50,
+  num_sims=10,
   tx_chegada=2,
   tx_saida=1,
-  name='caso1'
+  name='caso1',
+  infinita=True
 )
 
 # Caso 2:
 epidemia_caso2 = mm1_epidemy(
-  num_sims=50,
+  num_sims=20,
   tx_chegada=4,
   tx_saida=2,
-  name='caso2'
+  name='caso2',
+  infinita=True
 )
 
 # Caso 3:
 epidemia_caso3 = mm1_epidemy(
-  num_sims=50,
+  num_sims=20,
   tx_chegada=1,
   tx_saida=1.05,
-  name='caso3'
+  name='caso3',
+  infinita=True
 )
 
 # Caso 4:
 epidemia_caso4 = mm1_epidemy(
-  num_sims=50,
+  num_sims=20,
   tx_chegada=1,
   tx_saida=1.10,
-  name='caso4'
+  name='caso4',
+  infinita=True
 )
 
 # # Roda as simulacoes
@@ -125,10 +129,21 @@ def plot_graph(
     print(f'Não há dados suficientes para gerar o gráfico de {arquivo}!')
     return
 
+  # Calcula o intervalo de confiança de 95%
+  media = np.mean(eixo_y)
+  std_dev = np.std(eixo_y)
+  n = len(eixo_y)
+  z_score = 1.96 # Valor crítico para intervalo de confiança de 95%
+  margem_erro = z_score * (std_dev / np.sqrt(n))
+
+  lim_sup = media + margem_erro
+  lim_inf = media - margem_erro
+
   # Gera gráfico
   plt.figure(figsize=(8, 6))
   plt.title(f'{title} (Caso {caso}): λ={tx_chegada}, μ={tx_saida}')
-  plt.plot(eixo_x, eixo_y, label=title)
+  plt.plot(eixo_x, eixo_y, label=title, marker='o')
+  plt.fill_between(eixo_x, lim_inf, lim_sup, alpha=0.2, label='Intervalo de confiança de 95%')
   plt.xlabel(xlabel)
   plt.ylabel(ylabel)
   plt.ticklabel_format(style='plain', axis='x')
@@ -169,9 +184,10 @@ for i, arquivo in enumerate(glob.glob("dados/*.json")):
     dados_json = json.load(f)
     tx_chegada = dados_json['tx_chegada']
     tx_saida = dados_json['tx_saida']
+    ehInfinita = ' Infinita' if ('infinita' in arquivo) else False
     
     for type in ['terminam', 'todas']:
-      terminam = 'Epidemias que terminam' if type == 'terminam' else 'Todas as epidemias'
+      terminam = f'Epidemias{ehInfinita} que terminam' if type == 'terminam' else f'Epidemias{ehInfinita}'
       dados_sim = dados_json[type]
 
       # constroi plot da CDF a partir do array de distribuicao de grau de saida
