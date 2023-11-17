@@ -55,7 +55,8 @@ class mm1_epidemy:
     debug=False,
     name=None,
     infinita=False,
-    tempo_max=1,
+    tempo_max=20,
+    deterministico=False,
   ):
     self.num_sims = num_sims
     self.tx_chegada = tx_chegada
@@ -65,6 +66,7 @@ class mm1_epidemy:
     self.name = name
     self.infinita = infinita
     self.tempo_max = tempo_max
+    self.deterministico = deterministico
 
     # semenado para manter consistencia entre as simulacoes
     random.seed(43)
@@ -74,6 +76,8 @@ class mm1_epidemy:
     self.out_file = (
       'mm1_epidemy.' +
       (name if name else '') +
+      ('.infinita' if infinita else '.finita') +
+      ('.deterministico' if deterministico else '') +
       '.' + horario + '.json'
     )
   
@@ -82,7 +86,10 @@ class mm1_epidemy:
     self.t_chegada += np.random.exponential(1/self.tx_chegada)
 
   def gera_saida(self):
-    self.t_saida += np.random.exponential(1/self.tx_saida)
+    if self.deterministico:
+      self.t_saida += self.tx_saida
+    else:
+      self.t_saida += np.random.exponential(1/self.tx_saida)
 
   # funcao que decide qual evento acontece primeiro
   def next_event(self):
@@ -97,10 +104,10 @@ class mm1_epidemy:
   def criterio_parada(
     self,
     it_finita, # iteracao atual
-    inicio_infinita, # tempo de início da simulação infinita em minutos
+    inicio_infinita, # tempo de início da simulação infinita em segundos
   ):
     if self.infinita:
-      tempo_limite_segundos = self.tempo_max * 60
+      tempo_limite_segundos = self.tempo_max
       return (time.time() - inicio_infinita) < tempo_limite_segundos
     else:
       return (it_finita < self.max_iter)
