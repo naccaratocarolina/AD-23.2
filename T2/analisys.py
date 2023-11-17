@@ -155,7 +155,7 @@ def run_analisys():
           tx_saida,
           eixo_x,
           eixo_y,
-          f'CDF da quantidade de filhos ({terminam})',
+          f'CDF da quantidade de filhos {terminam}',
           'Quantidade de filhos',
           'Probabilidade acumulada',
           caso,
