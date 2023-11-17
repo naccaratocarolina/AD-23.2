@@ -7,6 +7,23 @@ from mm1_epidemy import mm1_epidemy
 import pandas as pd
 from matplotlib.font_manager import FontProperties
 
+def gera_info_text(ehInfinita, ehDeterministica, termina):
+  info = ''
+  if (ehInfinita):
+    info = 'Epidemia infinita\n'
+  else:
+    info = 'Epidemia finita\n'
+  
+  if (termina):
+    info += 'Epidemias que terminam'
+  else:
+    info += 'Todas as epidemias'
+  
+  if (ehDeterministica):
+    info += '\nTempo de serviço determinístico'
+
+  return info
+
 def plot_cdf(
     tx_chegada,
     tx_saida,
@@ -17,6 +34,9 @@ def plot_cdf(
     ylabel,
     caso,
     nome_arquivo,
+    ehInfinita,
+    ehDeterministica,
+    termina,
   ):
   if (len(eixo_x) <= 1):
     print(f'Não há dados suficientes para gerar o gráfico de {nome_arquivo}!')
@@ -31,11 +51,15 @@ def plot_cdf(
   eixo_x_interp = np.linspace(min(eixo_x), max(eixo_x), num=len(eixo_x), endpoint=True)
   eixo_y_interp = np.array(f(eixo_x_interp))
 
+  # Informacoes adicionais
+  info = gera_info_text(ehInfinita, ehDeterministica, termina)
+
   # o plot tem que ter len(eixo_x) pontos para que a CDF seja corretamente plotada
   # por isso, o eixo x interpolado tem que ter len(eixo_x) pontos
 
   plt.plot(eixo_x_interp, eixo_y_interp, label='CDF contínua')
   plt.step(eixo_x, eixo_y, label='CDF discreta', where='post', linestyle='--', color='red', alpha=0.5)
+  plt.annotate(info, xy=(0.5, 0.05), xycoords='axes fraction', ha='center', fontsize=9, bbox=dict(facecolor='white', alpha=0.8))
   plt.xlabel(xlabel)
   plt.ylabel(ylabel)
   plt.ticklabel_format(style='plain', axis='x')
@@ -43,7 +67,6 @@ def plot_cdf(
   plt.savefig(f'graficos/{nome_arquivo}')
   plt.close()
   print(f'Gráfico {nome_arquivo} gerado com sucesso!')
-  # plt.show()
 
 # Estrutura de data:
 # { title1: [value1], title2: [value2], ... }
@@ -82,6 +105,9 @@ def plot_graph(
   ylabel,
   caso,
   nome_arquivo,
+  ehInfinita,
+  ehDeterministica,
+  termina,
 ):
   if (len(eixo_x) <= 1):
     print(f'Não há dados suficientes para gerar o gráfico de {nome_arquivo}!')
@@ -97,11 +123,15 @@ def plot_graph(
   lim_sup = eixo_y + margem_erro
   lim_inf = eixo_y - margem_erro
 
+  # Informacoes adicionais
+  info = gera_info_text(ehInfinita, ehDeterministica, termina)
+
   # Gera gráfico
   plt.figure(figsize=(9, 7))
   plt.title(f'{title} (Caso {caso}): λ={tx_chegada}, μ={tx_saida}')
   plt.plot(eixo_x, eixo_y, label=title, marker='o')
   plt.fill_between(eixo_x, lim_inf, lim_sup, alpha=0.2, label='Intervalo de confiança de 95%')
+  plt.annotate(info, xy=(0.5, 0.05), xycoords='axes fraction', ha='center', fontsize=10, bbox=dict(facecolor='white', alpha=0.8))
   plt.xlabel(xlabel)
   plt.ylabel(ylabel)
   plt.ticklabel_format(style='plain', axis='x')
@@ -136,10 +166,11 @@ def run_analisys():
       dados_json = json.load(f)
       tx_chegada = dados_json['tx_chegada']
       tx_saida = dados_json['tx_saida']
-      ehInfinita = 'Infinitas' if ('infinita' in arquivo) else ''
+      ehInfinita = True if ('infinita' in arquivo) else False
+      ehDeterministica = True if ('deterministico' in arquivo) else False
       
       for type in ['terminam', 'todas']:
-        terminam = f'Epidemias {ehInfinita} que terminam' if type == 'terminam' else f'{ehInfinita}'
+        termina = True if (type == 'terminam') else False
         dados_sim = dados_json[type]
 
         # constroi plot da CDF a partir do array de distribuicao de grau de saida
@@ -155,11 +186,14 @@ def run_analisys():
           tx_saida,
           eixo_x,
           eixo_y,
-          f'CDF da quantidade de filhos {terminam}',
+          'CDF da quantidade de filhos',
           'Quantidade de filhos',
           'Probabilidade acumulada',
           caso,
           f'{i}_caso_{caso}.cdf_filhos.{type}.png',
+          ehInfinita,
+          ehDeterministica,
+          termina,
         )
 
         # Imprime grafico da media do numero de infectados por geracao
@@ -170,11 +204,14 @@ def run_analisys():
           tx_saida,
           eixo_x,
           eixo_y,
-          f'Média do número de infectados por geração ({terminam})',
+          'Média do número de infectados por geração',
           'Geração',
           'Número de infectados',
           caso,
           f'{i}_caso_{caso}.media_infectados.{type}.png',
+          ehInfinita,
+          ehDeterministica,
+          termina,
         )
 
       # Constuir a tabela de dados
