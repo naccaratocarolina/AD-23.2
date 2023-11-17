@@ -19,7 +19,7 @@ def plot_cdf(
     nome_arquivo,
   ):
   if (len(eixo_x) <= 1):
-    print(f'Não há dados suficientes para gerar o gráfico de {arquivo}!')
+    print(f'Não há dados suficientes para gerar o gráfico de {nome_arquivo}!')
     return
 
   # Gera grafico da CDF
@@ -84,7 +84,7 @@ def plot_graph(
   nome_arquivo,
 ):
   if (len(eixo_x) <= 1):
-    print(f'Não há dados suficientes para gerar o gráfico de {arquivo}!')
+    print(f'Não há dados suficientes para gerar o gráfico de {nome_arquivo}!')
     return
 
   # Calcula o intervalo de confiança de 95%
