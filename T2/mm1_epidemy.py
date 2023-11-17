@@ -2,6 +2,7 @@ import json
 import numpy as np
 import datetime
 import random
+import time
 
 def calc_dist(arr):
   if len(arr) == 0:
@@ -19,6 +20,16 @@ def calc_mean(arr):
   if len(arr) == 0:
     return 0
   return np.array(arr).mean().tolist()
+
+# função recebe uma lista de listas
+# retorna a média do somatório dos valores das sublistas nos mesmos índices
+def calc_media_por_geracao(arr):
+  tam_maior_sublista = max(map(len, arr), default=0)
+  medias = [0] * tam_maior_sublista
+  for i in range(len(arr)):
+    for j in range(len(arr[i])):
+      medias[j] += arr[i][j]
+  return [m / len(arr) for m in medias]
 
 def append(arr, obj):
   arr_ = arr.copy()
@@ -42,7 +53,9 @@ class mm1_epidemy:
     tx_saida=1,
     max_iter=1000000,
     debug=False,
-    name=None
+    name=None,
+    infinita=False,
+    tempo_max=1,
   ):
     self.num_sims = num_sims
     self.tx_chegada = tx_chegada
@@ -50,6 +63,8 @@ class mm1_epidemy:
     self.max_iter = max_iter
     self.debug = debug
     self.name = name
+    self.infinita = infinita
+    self.tempo_max = tempo_max
 
     # semenado para manter consistencia entre as simulacoes
     random.seed(43)
@@ -75,6 +90,20 @@ class mm1_epidemy:
       return 'saida'
     else:
       return 'chegada'
+
+  # Para simulações finitas, o critério de parada é o número de iterações
+  # Para simulações infinitas, é estipulado um tempo máximo de simulação, onde é
+  # permitido que hajam gerações sem nascimentos
+  def criterio_parada(
+    self,
+    it_finita, # iteracao atual
+    inicio_infinita, # tempo de início da simulação infinita em minutos
+  ):
+    if self.infinita:
+      tempo_limite_segundos = self.tempo_max * 60
+      return (time.time() - inicio_infinita) < tempo_limite_segundos
+    else:
+      return (it_finita < self.max_iter)
 
   def run_one_mm1_epid(self):
     # tempos
@@ -109,7 +138,9 @@ class mm1_epidemy:
 
     extinta = False
 
-    while it < self.max_iter:
+    inicio_infinita = time.time()
+
+    while self.criterio_parada(it, inicio_infinita):
       if self.debug:
         print('====================================================')
         print(self.next_event())
@@ -151,7 +182,8 @@ class mm1_epidemy:
           if self.debug:
             print('!! extinçao !!')
           extinta = True
-          break
+          if not self.infinita:
+            break
 
         # gera proxima saida
         self.gera_saida()
@@ -173,17 +205,17 @@ class mm1_epidemy:
       if self.debug:
         print('====================================================')
 
-    arr_aux = np.array(arr_filhos_por_pai)
-    freq = [0] * int(arr_aux.max() + 1)
-    for i in range(len(freq)):
-      freq[i] = (arr_aux == i).sum()
-
-    dist = freq / sum(freq)
-
     print('Extinta?', extinta)
     print('Numero de geracoes:', num_gen)
     print('Numero de iteracoes:', it)
-    print('Distri. de nascimentos:', dist)
+    if len(arr_filhos_por_pai) > 0:
+      arr_aux = np.array(arr_filhos_por_pai)
+      freq = [0] * int(arr_aux.max() + 1)
+      for i in range(len(freq)):
+        freq[i] = (arr_aux == i).sum()
+
+      dist = freq / sum(freq)
+      print('Distri. de nascimentos:', dist)
     print('\n')
 
     # cria JSON de saida
@@ -194,8 +226,8 @@ class mm1_epidemy:
       'num_geracoes': num_gen,
       'num_iteracoes': it,
       'gen_por_no': arr_gen_por_no,
-      'freq_nascimentos_por_pai': freq,
-      'dist_nascimentos_por_pai': dist.tolist(),
+      'freq_nascimentos_por_pai': freq if len(arr_filhos_por_pai) > 0 else [],
+      'dist_nascimentos_por_pai': dist.tolist() if len(arr_filhos_por_pai) > 0 else [],
       'num_max_filhos': max_qtd_filhos,
       'qnt_filhos_1_gen': arr_filhos_por_gen[1] if len(arr_filhos_por_gen) > 1 else 0,
       'acum_clientes': acum_clientes,
@@ -228,6 +260,7 @@ class mm1_epidemy:
         'gen_por_no': [],
         'qtd_iteracoes': [],
         'qtd_pais_atendidos': [],
+        'qnt_infectados_por_gen': [],
       },
       'todas': {
         'qnt_filhos_por_pai': [],
@@ -237,8 +270,12 @@ class mm1_epidemy:
         'gen_por_no': [],
         'qtd_iteracoes': [],
         'qtd_pais_atendidos': [],
+        'qnt_infectados_por_gen': [],
       }
     }
+
+    qnt_infectados_por_gen_terminam = []
+    qnt_infectados_por_gen_todas = []
 
     for sim in out['sims']:
       if sim['extinta']:
@@ -249,6 +286,7 @@ class mm1_epidemy:
         metrics['terminam']['gen_por_no'] = append(metrics['terminam']['gen_por_no'], sim['gen_por_no'])
         metrics['terminam']['qtd_iteracoes'] = append(metrics['terminam']['qtd_iteracoes'], sim['num_iteracoes'])
         metrics['terminam']['qtd_pais_atendidos'] = append(metrics['terminam']['qtd_pais_atendidos'], sim['acum_clientes'])
+        metrics['terminam']['qnt_infectados_por_gen'] = qnt_infectados_por_gen_terminam.append(sim['filhos_por_gen'])
       metrics['todas']['qnt_filhos_por_pai'] = append(metrics['todas']['qnt_filhos_por_pai'], sim['filhos_por_pai'])
       metrics['todas']['qnt_filhos_raiz'] = append(metrics['todas']['qnt_filhos_raiz'], sim['qnt_filhos_1_gen'])
       metrics['todas']['grau_saida_maximo'] = append(metrics['todas']['grau_saida_maximo'], sim['num_max_filhos'])
@@ -256,6 +294,7 @@ class mm1_epidemy:
       metrics['todas']['gen_por_no'] = append(metrics['todas']['gen_por_no'], sim['gen_por_no'])
       metrics['todas']['qtd_iteracoes'] = append(metrics['todas']['qtd_iteracoes'], sim['num_iteracoes'])
       metrics['todas']['qtd_pais_atendidos'] = append(metrics['todas']['qtd_pais_atendidos'], sim['acum_clientes'])
+      metrics['todas']['qnt_infectados_por_gen'] = qnt_infectados_por_gen_todas.append(sim['filhos_por_gen'])
 
     # resultados (media entre as simulações)
     results = {
@@ -291,6 +330,9 @@ class mm1_epidemy:
     ### • qual a média do número de clientes atendidos por período ocupado?
     results['terminam']['media_clientes_atendidos'] = calc_mean(metrics['terminam']['qtd_pais_atendidos'])
     results['todas']['media_clientes_atendidos'] = calc_mean(metrics['todas']['qtd_pais_atendidos'])
+    ### • média do número de infectados a cada iteração nas N simulações
+    results['terminam']['media_infectados_por_geracao'] = calc_media_por_geracao(qnt_infectados_por_gen_terminam)
+    results['todas']['media_infectados_por_geracao'] = calc_media_por_geracao(qnt_infectados_por_gen_todas)
 
     # cria e exporta JSON de saida na pasta 'dados'
     with open('dados/'+self.out_file, 'w') as outfile:
