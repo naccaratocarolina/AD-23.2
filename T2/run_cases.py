@@ -151,15 +151,15 @@ finita_det_caso4 = mm1_epidemy(
 
 # Roda as simulacoes
 
-# infinita_caso1.run_mm1_epid()
-# infinita_caso2.run_mm1_epid()
-# infinita_caso3.run_mm1_epid()
-# infinita_caso4.run_mm1_epid()
+infinita_caso1.run_mm1_epid()
+infinita_caso2.run_mm1_epid()
+infinita_caso3.run_mm1_epid()
+infinita_caso4.run_mm1_epid()
 
-# infinita_det_caso1.run_mm1_epid()
-# infinita_det_caso2.run_mm1_epid()
-# infinita_det_caso3.run_mm1_epid()
-# infinita_det_caso4.run_mm1_epid()
+infinita_det_caso1.run_mm1_epid()
+infinita_det_caso2.run_mm1_epid()
+infinita_det_caso3.run_mm1_epid()
+infinita_det_caso4.run_mm1_epid()
 
 # finita_caso1.run_mm1_epid()
 # finita_caso2.run_mm1_epid()
