@@ -1,3 +1,4 @@
+from decimal import Decimal
 import json
 import numpy as np
 import matplotlib.pyplot as plt
@@ -142,7 +143,8 @@ def plot_graph(
   print(f'Gráfico {nome_arquivo} gerado com sucesso!')
 
 def format_float(value):
-  return f'{value:.2f}'
+  # Formata para notação científica
+  return '{:.2E}'.format(Decimal(value))
 
 def run_analisys():
   # Cabeçalho da tabela
@@ -221,7 +223,7 @@ def run_analisys():
       # Formata para ser 0.000%
       # Dados para a tabela
       linha = [
-        f"Caso {caso} (fração das que terminam: {dt_terminam['frac_periodo_ocupado']:.3%})",
+        f"Caso {caso} (fração das que terminam: {dados_json['frac_periodo_ocupado']:.3%})",
         f"{format_float(dt_terminam['grau_medio_saida_raiz'])}",
         f"{format_float(dt_terminam['grau_de_saida_maximo'])}",
         f"{format_float(dt_terminam['altura_media'])}",
