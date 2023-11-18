@@ -2,7 +2,6 @@ import json
 import numpy as np
 import datetime
 import random
-import time
 
 def calc_dist(arr):
   if len(arr) == 0:
@@ -98,18 +97,11 @@ class mm1_epidemy:
     else:
       return 'chegada'
 
-  # Para simulações finitas, o critério de parada é o número de iterações
-  # Para simulações infinitas, é estipulado um tempo máximo de simulação, onde é
-  # permitido que hajam gerações sem nascimentos
+  # Para ambas as simulações finitas, o critério de parada é o número de iterações
   def criterio_parada(
     self,
     it_finita, # iteracao atual
-    inicio_infinita, # tempo de início da simulação infinita em segundos
   ):
-    if self.infinita:
-      tempo_limite_segundos = self.tempo_max
-      return (time.time() - inicio_infinita) < tempo_limite_segundos
-    else:
       return (it_finita < self.max_iter)
 
   def run_one_mm1_epid(self):
@@ -145,9 +137,7 @@ class mm1_epidemy:
 
     extinta = False
 
-    inicio_infinita = time.time()
-
-    while self.criterio_parada(it, inicio_infinita):
+    while self.criterio_parada(it):
       if self.debug:
         print('====================================================')
         print(self.next_event())
