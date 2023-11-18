@@ -82,7 +82,9 @@ class mm1_epidemy:
   def gera_chegada(self):
     self.t_chegada += np.random.exponential(1/self.tx_chegada)
 
-  def gera_saida(self):
+  def gera_saida(self, t = None):
+    if t:
+      self.t_saida = t
     if self.deterministico:
       self.t_saida += 1 / self.tx_saida
     else:
@@ -181,9 +183,10 @@ class mm1_epidemy:
             print('!! extinçao !!')
 
           if self.infinita:
-            extinta = False
             # gera proxima chegada
             self.gera_chegada()
+            # gera proxima saida
+            self.gera_saida(self.t_chegada)
             it_ocupado -= 1
             continue
           else:
