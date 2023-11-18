@@ -147,7 +147,7 @@ def format_float(value):
 def run_analisys():
   # Cabeçalho da tabela
   header = [
-    'Caso (terminam | todas)',
+    'Caso',
     'Grau médio de\nsaída da raiz',
     'Grau de saída\nmáximo',
     'Altura média',
@@ -170,7 +170,7 @@ def run_analisys():
       ehInfinita = True if ('infinita' in arquivo) else False
       ehDeterministica = True if ('deterministico' in arquivo) else False
       
-      for type in ['terminam', 'todas']:
+      for type in ['terminam']:
         termina = True if (type == 'terminam') else False
         dados_sim = dados_json[type]
 
@@ -217,17 +217,17 @@ def run_analisys():
 
       # Constuir a tabela de dados
       dt_terminam = dados_json['terminam']
-      dt_todas = dados_json['todas']
 
+      # Formata para ser 0.000%
       # Dados para a tabela
       linha = [
-        f"Caso {caso}",
-        f"{format_float(dt_terminam['grau_medio_saida_raiz'])} | {format_float(dt_todas['grau_medio_saida_raiz'])}",
-        f"{format_float(dt_terminam['grau_de_saida_maximo'])} | {format_float(dt_todas['grau_de_saida_maximo'])}",
-        f"{format_float(dt_terminam['altura_media'])} | {format_float(dt_todas['altura_media'])}",
-        f"{format_float(dt_terminam['altura_media_nos'])} | {format_float(dt_todas['altura_media_nos'])}",
-        f"{format_float(dt_terminam['media_duracao_periodo_ocupado'])} | {format_float(dt_todas['media_duracao_periodo_ocupado'])}",
-        f"{format_float(dt_terminam['media_clientes_atendidos'])} | {format_float(dt_todas['media_clientes_atendidos'])}"
+        f"Caso {caso} (fração das que terminam: {dt_terminam['frac_periodo_ocupado']:.3%})",
+        f"{format_float(dt_terminam['grau_medio_saida_raiz'])}",
+        f"{format_float(dt_terminam['grau_de_saida_maximo'])}",
+        f"{format_float(dt_terminam['altura_media'])}",
+        f"{format_float(dt_terminam['altura_media_nos'])}",
+        f"{format_float(dt_terminam['media_duracao_periodo_ocupado'])}",
+        f"{format_float(dt_terminam['media_clientes_atendidos'])}"
       ]
 
       # adiciona linha na df

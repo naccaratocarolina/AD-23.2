@@ -82,7 +82,9 @@ class mm1_epidemy:
   def gera_chegada(self):
     self.t_chegada += np.random.exponential(1/self.tx_chegada)
 
-  def gera_saida(self):
+  def gera_saida(self, t = None):
+    if t:
+      self.t_saida = t
     if self.deterministico:
       self.t_saida += 1 / self.tx_saida
     else:
@@ -189,13 +191,13 @@ class mm1_epidemy:
             # gera proxima chegada
             self.gera_chegada()
             # gera proxima saida
-            self.gera_saida()
+            self.gera_saida(self.t_chegada)
 
             continue
           else:
             break
-        else:
-          t_ocupado += self.t_chegada - clock_ant
+
+        t_ocupado += self.t_saida - clock_ant
 
         # gera proxima saida
         self.gera_saida()
@@ -218,6 +220,7 @@ class mm1_epidemy:
 
       it_ocupado += 1
       it += 1
+      # print(t_ocupado, t_total, t_ocupado/t_total)
       if self.debug:
         print('====================================================')
 
@@ -270,6 +273,8 @@ class mm1_epidemy:
     ### iterar para cada simulação (separando em terminam e todas)
     ### acumular as métricas de cada simulação (separando em terminam e todas)
     metrics = {
+      'qtd_terminam': 0,
+      'qtd_todas': 0,
       'terminam': {
         'qnt_filhos_por_pai': [],
         'qnt_filhos_raiz': [],
@@ -300,7 +305,9 @@ class mm1_epidemy:
     qnt_infectados_por_gen_todas = []
 
     for sim in out['sims']:
+      metrics['qtd_todas'] += 1
       if sim['extinta']:
+        metrics['qtd_terminam'] += 1
         metrics['terminam']['qnt_filhos_por_pai'] = append(metrics['terminam']['qnt_filhos_por_pai'], sim['filhos_por_pai'])
         metrics['terminam']['qnt_filhos_raiz'] = append(metrics['terminam']['qnt_filhos_raiz'], sim['qnt_filhos_1_gen'])
         metrics['terminam']['grau_saida_maximo'] = append(metrics['terminam']['grau_saida_maximo'], sim['num_max_filhos'])
@@ -311,16 +318,16 @@ class mm1_epidemy:
         metrics['terminam']['t_total'] = append(metrics['terminam']['t_total'], sim['t_total'])
         metrics['terminam']['qtd_pais_atendidos'] = append(metrics['terminam']['qtd_pais_atendidos'], sim['acum_clientes'])
         metrics['terminam']['qnt_infectados_por_gen'] = qnt_infectados_por_gen_terminam.append(sim['filhos_por_gen'])
-      metrics['todas']['qnt_filhos_por_pai'] = append(metrics['todas']['qnt_filhos_por_pai'], sim['filhos_por_pai'])
-      metrics['todas']['qnt_filhos_raiz'] = append(metrics['todas']['qnt_filhos_raiz'], sim['qnt_filhos_1_gen'])
-      metrics['todas']['grau_saida_maximo'] = append(metrics['todas']['grau_saida_maximo'], sim['num_max_filhos'])
-      metrics['todas']['qtd_geracoes'] = append(metrics['todas']['qtd_geracoes'], sim['num_geracoes'])
-      metrics['todas']['gen_por_no'] = append(metrics['todas']['gen_por_no'], sim['gen_por_no'])
-      metrics['todas']['qtd_iteracoes'] = append(metrics['todas']['qtd_iteracoes'], sim['num_iteracoes'])
-      metrics['terminam']['t_ocupado'] = append(metrics['terminam']['t_ocupado'], sim['t_ocupado'])
-      metrics['terminam']['t_total'] = append(metrics['terminam']['t_total'], sim['t_total'])
-      metrics['todas']['qtd_pais_atendidos'] = append(metrics['todas']['qtd_pais_atendidos'], sim['acum_clientes'])
-      metrics['todas']['qnt_infectados_por_gen'] = qnt_infectados_por_gen_todas.append(sim['filhos_por_gen'])
+      # metrics['todas']['qnt_filhos_por_pai'] = append(metrics['todas']['qnt_filhos_por_pai'], sim['filhos_por_pai'])
+      # metrics['todas']['qnt_filhos_raiz'] = append(metrics['todas']['qnt_filhos_raiz'], sim['qnt_filhos_1_gen'])
+      # metrics['todas']['grau_saida_maximo'] = append(metrics['todas']['grau_saida_maximo'], sim['num_max_filhos'])
+      # metrics['todas']['qtd_geracoes'] = append(metrics['todas']['qtd_geracoes'], sim['num_geracoes'])
+      # metrics['todas']['gen_por_no'] = append(metrics['todas']['gen_por_no'], sim['gen_por_no'])
+      # metrics['todas']['qtd_iteracoes'] = append(metrics['todas']['qtd_iteracoes'], sim['num_iteracoes'])
+      # metrics['todas']['t_ocupado'] = append(metrics['terminam']['t_ocupado'], sim['t_ocupado'])
+      # metrics['todas']['t_total'] = append(metrics['terminam']['t_total'], sim['t_total'])
+      # metrics['todas']['qtd_pais_atendidos'] = append(metrics['todas']['qtd_pais_atendidos'], sim['acum_clientes'])
+      # metrics['todas']['qnt_infectados_por_gen'] = qnt_infectados_por_gen_todas.append(sim['filhos_por_gen'])
 
     # resultados (media entre as simulações)
     results = {
@@ -332,35 +339,36 @@ class mm1_epidemy:
       'caso': self.name,
       'terminam': {},
       'todas': {},
+      'frac_periodo_ocupado': metrics['qtd_terminam'] / metrics['qtd_todas'],
     }
 
     ### • qual a distribuição dos graus de saída?
     ###   obs.: plote a CDF do grau de saída dos vértices
     results['terminam']['dist_grau_saida'] = calc_dist(metrics['terminam']['qnt_filhos_por_pai'])
-    results['todas']['dist_grau_saida'] = calc_dist(metrics['todas']['qnt_filhos_por_pai'])
+    # results['todas']['dist_grau_saida'] = calc_dist(metrics['todas']['qnt_filhos_por_pai'])
     ### • qual o grau médio de saída da raiz?
     results['terminam']['grau_medio_saida_raiz'] = calc_mean(metrics['terminam']['qnt_filhos_raiz'])
-    results['todas']['grau_medio_saida_raiz'] = calc_mean(metrics['todas']['qnt_filhos_raiz'])
+    # results['todas']['grau_medio_saida_raiz'] = calc_mean(metrics['todas']['qnt_filhos_raiz'])
     ### • qual a média do grau de saída máximo?
     results['terminam']['grau_de_saida_maximo'] = calc_mean(metrics['terminam']['grau_saida_maximo'])
-    results['todas']['grau_de_saida_maximo'] = calc_mean(metrics['todas']['grau_saida_maximo'])
+    # results['todas']['grau_de_saida_maximo'] = calc_mean(metrics['todas']['grau_saida_maximo'])
     ### • qual a altura média da árvore?
     results['terminam']['altura_media'] = calc_mean(metrics['terminam']['qtd_geracoes'])
-    results['todas']['altura_media'] = calc_mean(metrics['todas']['qtd_geracoes'])
+    # results['todas']['altura_media'] = calc_mean(metrics['todas']['qtd_geracoes'])
     ### • qual a média das alturas dos nós das árvores?
     results['terminam']['altura_media_nos'] = calc_mean(metrics['terminam']['gen_por_no'])
-    results['todas']['altura_media_nos'] = calc_mean(metrics['todas']['gen_por_no'])
+    # results['todas']['altura_media_nos'] = calc_mean(metrics['todas']['gen_por_no'])
     ### • qual a média da duração do período ocupado?
     results['terminam']['media_duracao_periodo_ocupado'] = 0 if calc_mean(metrics['terminam']['t_total']) == 0 else (
       calc_mean(metrics['terminam']['t_ocupado']) / calc_mean(metrics['terminam']['t_total']))
-    results['todas']['media_duracao_periodo_ocupado'] = 0 if calc_mean(metrics['todas']['t_total']) == 0 else (
-      calc_mean(metrics['todas']['t_ocupado']) / calc_mean(metrics['todas']['t_total']))
+    # results['todas']['media_duracao_periodo_ocupado'] = 0 if calc_mean(metrics['todas']['t_total']) == 0 else (
+    #  calc_mean(metrics['todas']['t_ocupado']) / calc_mean(metrics['todas']['t_total']))
     ### • qual a média do número de clientes atendidos por período ocupado?
     results['terminam']['media_clientes_atendidos'] = calc_mean(metrics['terminam']['qtd_pais_atendidos'])
-    results['todas']['media_clientes_atendidos'] = calc_mean(metrics['todas']['qtd_pais_atendidos'])
+    # results['todas']['media_clientes_atendidos'] = calc_mean(metrics['todas']['qtd_pais_atendidos'])
     ### • média do número de infectados a cada iteração nas N simulações
     results['terminam']['media_infectados_por_geracao'] = calc_media_por_geracao(qnt_infectados_por_gen_terminam)
-    results['todas']['media_infectados_por_geracao'] = calc_media_por_geracao(qnt_infectados_por_gen_todas)
+    # results['todas']['media_infectados_por_geracao'] = calc_media_por_geracao(qnt_infectados_por_gen_todas)
 
     # cria e exporta JSON de saida na pasta 'dados'
     with open('dados/'+self.out_file, 'w') as outfile:
