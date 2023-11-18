@@ -100,9 +100,9 @@ class mm1_epidemy:
   # Para ambas as simulações finitas, o critério de parada é o número de iterações
   def criterio_parada(
     self,
-    it_finita, # iteracao atual
+    it, # iteracao atual
   ):
-      return (it_finita < self.max_iter)
+      return (it < self.max_iter)
 
   def run_one_mm1_epid(self):
     # tempos
@@ -176,10 +176,17 @@ class mm1_epidemy:
           num_gen += 1
 
         if (pais_atendidos == tam_gen_ant) and tam_gen == 0:
+          extinta = True
+
           if self.debug:
             print('!! extinçao !!')
-          extinta = True
-          if not self.infinita:
+
+          if self.infinita:
+            extinta = False
+            # gera proxima chegada
+            self.gera_chegada()
+            continue
+          else:
             break
 
         # gera proxima saida
