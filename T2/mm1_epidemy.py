@@ -82,9 +82,7 @@ class mm1_epidemy:
   def gera_chegada(self):
     self.t_chegada += np.random.exponential(1/self.tx_chegada)
 
-  def gera_saida(self, t = None):
-    if t:
-      self.t_saida = t
+  def gera_saida(self):
     if self.deterministico:
       self.t_saida += 1 / self.tx_saida
     else:
@@ -136,6 +134,9 @@ class mm1_epidemy:
     it = 0
     it_ocupado = 0
 
+    t_total = 0
+    t_ocupado = 0
+
     extinta = False
 
     while self.criterio_parada(it):
@@ -149,6 +150,8 @@ class mm1_epidemy:
         print('----------------------------------------------------')
 
       if self.next_event() == 'saida':
+        clock_ant = t_total
+        t_total = self.t_saida
 
         # muda de pai
         max_qtd_filhos = max(max_qtd_filhos, qtd_filhos)
@@ -186,16 +189,21 @@ class mm1_epidemy:
             # gera proxima chegada
             self.gera_chegada()
             # gera proxima saida
-            self.gera_saida(self.t_chegada)
-            it_ocupado -= 1
+            self.gera_saida()
+
             continue
           else:
             break
+        else:
+          t_ocupado += self.t_chegada - clock_ant
 
         # gera proxima saida
         self.gera_saida()
 
       if self.next_event() == 'chegada':
+        clock_ant = t_total
+        t_total = self.t_chegada
+
         # mais um filho
         qtd_filhos += 1
 
@@ -233,7 +241,8 @@ class mm1_epidemy:
       'filhos_por_pai': arr_filhos_por_pai,
       'num_geracoes': num_gen,
       'num_iteracoes': it,
-      'num_iteracoes_ocupado': it_ocupado,
+      't_ocupado': t_ocupado,
+      't_total': t_total,
       'gen_por_no': arr_gen_por_no,
       'freq_nascimentos_por_pai': freq if len(arr_filhos_por_pai) > 0 else [],
       'dist_nascimentos_por_pai': dist.tolist() if len(arr_filhos_por_pai) > 0 else [],
@@ -268,7 +277,8 @@ class mm1_epidemy:
         'qtd_geracoes': [],
         'gen_por_no': [],
         'qtd_iteracoes': [],
-        'qtd_iteracoes_ocupado': [],
+        't_ocupado': [],
+        't_total': [],
         'qtd_pais_atendidos': [],
         'qnt_infectados_por_gen': [],
       },
@@ -279,7 +289,8 @@ class mm1_epidemy:
         'qtd_geracoes': [],
         'gen_por_no': [],
         'qtd_iteracoes': [],
-        'qtd_iteracoes_ocupado': [],
+        't_ocupado': [],
+        't_total': [],
         'qtd_pais_atendidos': [],
         'qnt_infectados_por_gen': [],
       }
@@ -296,7 +307,8 @@ class mm1_epidemy:
         metrics['terminam']['qtd_geracoes'] = append(metrics['terminam']['qtd_geracoes'], sim['num_geracoes'])
         metrics['terminam']['gen_por_no'] = append(metrics['terminam']['gen_por_no'], sim['gen_por_no'])
         metrics['terminam']['qtd_iteracoes'] = append(metrics['terminam']['qtd_iteracoes'], sim['num_iteracoes'])
-        metrics['terminam']['qtd_iteracoes_ocupado'] = append(metrics['terminam']['qtd_iteracoes_ocupado'], sim['num_iteracoes_ocupado'])
+        metrics['terminam']['t_ocupado'] = append(metrics['terminam']['t_ocupado'], sim['t_ocupado'])
+        metrics['terminam']['t_total'] = append(metrics['terminam']['t_total'], sim['t_total'])
         metrics['terminam']['qtd_pais_atendidos'] = append(metrics['terminam']['qtd_pais_atendidos'], sim['acum_clientes'])
         metrics['terminam']['qnt_infectados_por_gen'] = qnt_infectados_por_gen_terminam.append(sim['filhos_por_gen'])
       metrics['todas']['qnt_filhos_por_pai'] = append(metrics['todas']['qnt_filhos_por_pai'], sim['filhos_por_pai'])
@@ -305,7 +317,8 @@ class mm1_epidemy:
       metrics['todas']['qtd_geracoes'] = append(metrics['todas']['qtd_geracoes'], sim['num_geracoes'])
       metrics['todas']['gen_por_no'] = append(metrics['todas']['gen_por_no'], sim['gen_por_no'])
       metrics['todas']['qtd_iteracoes'] = append(metrics['todas']['qtd_iteracoes'], sim['num_iteracoes'])
-      metrics['terminam']['qtd_iteracoes_ocupado'] = append(metrics['terminam']['qtd_iteracoes_ocupado'], sim['num_iteracoes_ocupado'])
+      metrics['terminam']['t_ocupado'] = append(metrics['terminam']['t_ocupado'], sim['t_ocupado'])
+      metrics['terminam']['t_total'] = append(metrics['terminam']['t_total'], sim['t_total'])
       metrics['todas']['qtd_pais_atendidos'] = append(metrics['todas']['qtd_pais_atendidos'], sim['acum_clientes'])
       metrics['todas']['qnt_infectados_por_gen'] = qnt_infectados_por_gen_todas.append(sim['filhos_por_gen'])
 
@@ -338,10 +351,10 @@ class mm1_epidemy:
     results['terminam']['altura_media_nos'] = calc_mean(metrics['terminam']['gen_por_no'])
     results['todas']['altura_media_nos'] = calc_mean(metrics['todas']['gen_por_no'])
     ### • qual a média da duração do período ocupado?
-    results['terminam']['media_duracao_periodo_ocupado'] = 0 if calc_mean(metrics['terminam']['qtd_iteracoes']) == 0 else (
-      calc_mean(metrics['terminam']['qtd_iteracoes_ocupado']) / calc_mean(metrics['terminam']['qtd_iteracoes']))
-    results['todas']['media_duracao_periodo_ocupado'] = 0 if calc_mean(metrics['todas']['qtd_iteracoes']) == 0 else (
-      calc_mean(metrics['todas']['qtd_iteracoes_ocupado']) / calc_mean(metrics['todas']['qtd_iteracoes']))
+    results['terminam']['media_duracao_periodo_ocupado'] = 0 if calc_mean(metrics['terminam']['t_total']) == 0 else (
+      calc_mean(metrics['terminam']['t_ocupado']) / calc_mean(metrics['terminam']['t_total']))
+    results['todas']['media_duracao_periodo_ocupado'] = 0 if calc_mean(metrics['todas']['t_total']) == 0 else (
+      calc_mean(metrics['todas']['t_ocupado']) / calc_mean(metrics['todas']['t_total']))
     ### • qual a média do número de clientes atendidos por período ocupado?
     results['terminam']['media_clientes_atendidos'] = calc_mean(metrics['terminam']['qtd_pais_atendidos'])
     results['todas']['media_clientes_atendidos'] = calc_mean(metrics['todas']['qtd_pais_atendidos'])
