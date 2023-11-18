@@ -1,0 +1,46 @@
+{
+  "arquivo": "mm1_epidemy.caso2.finita.2023-11-17_22-23-47.json",
+  "num_sims": 100,
+  "tx_chegada": 2,
+  "tx_saida": 4,
+  "max_iter": 1000000,
+  "caso": "caso2",
+  "terminam": {
+    "dist_grau_saida": [
+      0.970873786407767,
+      0.02912621359223301
+    ],
+    "grau_medio_saida_raiz": 0.01,
+    "grau_de_saida_maximo": 0.01,
+    "altura_media": 2.03,
+    "altura_media_nos": 0.08737864077669903,
+    "media_duracao_periodo_ocupado": 0.04,
+    "media_clientes_atendidos": 1.03,
+    "media_infectados_por_geracao": [
+      1.0,
+      0.01,
+      0.01,
+      0.01,
+      0.0
+    ]
+  },
+  "todas": {
+    "dist_grau_saida": [
+      0.970873786407767,
+      0.02912621359223301
+    ],
+    "grau_medio_saida_raiz": 0.01,
+    "grau_de_saida_maximo": 0.01,
+    "altura_media": 2.03,
+    "altura_media_nos": 0.08737864077669903,
+    "media_duracao_periodo_ocupado": 0.04,
+    "media_clientes_atendidos": 1.03,
+    "media_infectados_por_geracao": [
+      1.0,
+      0.01,
+      0.01,
+      0.01,
+      0.0
+    ]
+  }
+}

@@ -80,6 +80,7 @@ def plot_table(df, title='Tabela de dados'):
     cellLoc='center'
   )
   table.auto_set_font_size(False)
+  table.auto_set_column_width(col=list(range(len(df.columns))))  # Ajusta a largura das colunas
   table.set_fontsize(13)
   table.scale(1, 5)
 
@@ -131,7 +132,7 @@ def plot_graph(
   plt.title(f'{title} (Caso {caso}): λ={tx_chegada}, μ={tx_saida}')
   plt.plot(eixo_x, eixo_y, label=title, marker='o')
   plt.fill_between(eixo_x, lim_inf, lim_sup, alpha=0.2, label='Intervalo de confiança de 95%')
-  plt.annotate(info, xy=(0.5, 0.05), xycoords='axes fraction', ha='center', fontsize=10, bbox=dict(facecolor='white', alpha=0.8))
+  plt.annotate(info, xy=(0.5, 0.05), xycoords='axes fraction', ha='left', fontsize=9, bbox=dict(facecolor='white', alpha=0.8))
   plt.xlabel(xlabel)
   plt.ylabel(ylabel)
   plt.ticklabel_format(style='plain', axis='x')
