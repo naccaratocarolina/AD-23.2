@@ -335,9 +335,9 @@ class mm1_epidemy:
     results['terminam']['altura_media_nos'] = calc_mean(metrics['terminam']['gen_por_no'])
     results['todas']['altura_media_nos'] = calc_mean(metrics['todas']['gen_por_no'])
     ### • qual a média da duração do período ocupado?
-    results['terminam']['media_duracao_periodo_ocupado'] = (
+    results['terminam']['media_duracao_periodo_ocupado'] = 0 if calc_mean(metrics['terminam']['qtd_iteracoes']) == 0 else (
       calc_mean(metrics['terminam']['qtd_iteracoes_ocupado']) / calc_mean(metrics['terminam']['qtd_iteracoes']))
-    results['todas']['media_duracao_periodo_ocupado'] = (
+    results['todas']['media_duracao_periodo_ocupado'] = 0 if calc_mean(metrics['todas']['qtd_iteracoes']) == 0 else (
       calc_mean(metrics['todas']['qtd_iteracoes_ocupado']) / calc_mean(metrics['todas']['qtd_iteracoes']))
     ### • qual a média do número de clientes atendidos por período ocupado?
     results['terminam']['media_clientes_atendidos'] = calc_mean(metrics['terminam']['qtd_pais_atendidos'])
