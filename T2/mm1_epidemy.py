@@ -265,6 +265,7 @@ class mm1_epidemy:
         'qtd_geracoes': [],
         'gen_por_no': [],
         'qtd_iteracoes': [],
+        'qtd_iteracoes_ocupado': [],
         'qtd_pais_atendidos': [],
         'qnt_infectados_por_gen': [],
       },
@@ -275,6 +276,7 @@ class mm1_epidemy:
         'qtd_geracoes': [],
         'gen_por_no': [],
         'qtd_iteracoes': [],
+        'qtd_iteracoes_ocupado': [],
         'qtd_pais_atendidos': [],
         'qnt_infectados_por_gen': [],
       }
